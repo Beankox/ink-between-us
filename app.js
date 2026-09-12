@@ -1,0 +1,283 @@
+/* Ink Between Us — app logic
+   Vanilla JS, Firebase compat SDK, EmailJS for notification emails. */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+if (typeof emailjs !== "undefined" && emailjsConfig.publicKey !== "PASTE_ME") {
+  emailjs.init({ publicKey: emailjsConfig.publicKey });
+}
+
+// ---------- state ----------
+let currentUser = null;   // firebase auth user
+let currentProfile = null; // { name, email, partnerEmail }
+let selectedAuthor = "Bea";
+let editingPoemId = null; // null = new poem
+
+// ---------- element refs ----------
+const $ = (id) => document.getElementById(id);
+
+const authScreen = $("auth-screen");
+const appScreen = $("app-screen");
+
+const loginForm = $("login-form");
+const signupForm = $("signup-form");
+const authTabs = document.querySelectorAll(".auth-tab");
+
+const readerToggle = $("reader-toggle");
+const readerThumb = $("reader-thumb");
+const poemsList = $("poems-list");
+const poemsEmpty = $("poems-empty");
+
+const editor = $("editor");
+const editorTitle = $("editor-title");
+const editorBody = $("editor-body");
+const editorStatus = $("editor-status");
+const draftsList = $("drafts-list");
+const draftsEmpty = $("drafts-empty");
+
+// ---------- auth tab switching ----------
+authTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    authTabs.forEach(t => t.classList.remove("is-active"));
+    tab.classList.add("is-active");
+    const isLogin = tab.dataset.tab === "login";
+    loginForm.classList.toggle("is-hidden", !isLogin);
+    signupForm.classList.toggle("is-hidden", isLogin);
+  });
+});
+
+// ---------- signup ----------
+signupForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("signup-error").textContent = "";
+  const name = $("signup-name").value;
+  const email = $("signup-email").value.trim();
+  const password = $("signup-password").value;
+  const partnerEmail = $("signup-partner-email").value.trim().toLowerCase();
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await db.collection("users").doc(cred.user.uid).set({
+      name,
+      email: email.toLowerCase(),
+      partnerEmail,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    $("signup-error").textContent = err.message;
+  }
+});
+
+// ---------- login ----------
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("login-error").textContent = "";
+  const email = $("login-email").value.trim();
+  const password = $("login-password").value;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (err) {
+    $("login-error").textContent = err.message;
+  }
+});
+
+$("logout-btn").addEventListener("click", () => auth.signOut());
+
+// ---------- auth state ----------
+auth.onAuthStateChanged(async (user) => {
+  currentUser = user;
+  if (!user) {
+    currentProfile = null;
+    authScreen.classList.remove("is-hidden");
+    appScreen.classList.add("is-hidden");
+    return;
+  }
+  const doc = await db.collection("users").doc(user.uid).get();
+  currentProfile = doc.exists ? doc.data() : null;
+  if (!currentProfile) return; // profile still being created
+
+  authScreen.classList.add("is-hidden");
+  appScreen.classList.remove("is-hidden");
+  $("whoami").textContent = `Signed in as ${currentProfile.name}`;
+
+  // default the slider to the OTHER person's poems — that's usually what you open the page for
+  const otherAuthor = currentProfile.name === "Bea" ? "Abegail" : "Bea";
+  setSelectedAuthor(otherAuthor);
+  loadDrafts();
+});
+
+// ---------- slider ----------
+readerToggle.addEventListener("click", (e) => {
+  const btn = e.target.closest(".reader-toggle-btn");
+  if (!btn) return;
+  setSelectedAuthor(btn.dataset.author);
+});
+
+function setSelectedAuthor(author) {
+  selectedAuthor = author;
+  document.querySelectorAll(".reader-toggle-btn").forEach(b => {
+    b.classList.toggle("is-active", b.dataset.author === author);
+  });
+  readerThumb.style.transform = author === "Bea" ? "translateX(0)" : "translateX(100%)";
+  loadPublishedPoems();
+}
+
+// ---------- load published poems for the slider ----------
+async function loadPublishedPoems() {
+  poemsList.innerHTML = "";
+  poemsEmpty.classList.add("is-hidden");
+  try {
+    const snap = await db.collection("poems")
+      .where("authorName", "==", selectedAuthor)
+      .where("status", "==", "published")
+      .orderBy("publishedAt", "desc")
+      .get();
+
+    if (snap.empty) {
+      poemsEmpty.classList.remove("is-hidden");
+      return;
+    }
+    snap.forEach(docSnap => {
+      const p = docSnap.data();
+      poemsList.appendChild(renderPoemCard(p));
+    });
+  } catch (err) {
+    poemsEmpty.textContent = "Couldn't load poems: " + err.message;
+    poemsEmpty.classList.remove("is-hidden");
+  }
+}
+
+function renderPoemCard(p) {
+  const card = document.createElement("article");
+  card.className = "poem-card";
+  const date = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
+  card.innerHTML = `
+    <h3 class="poem-title"></h3>
+    <p class="poem-meta"></p>
+    <p class="poem-body"></p>
+  `;
+  card.querySelector(".poem-title").textContent = p.title || "Untitled";
+  card.querySelector(".poem-meta").textContent = date
+    ? `${p.authorName} · ${date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`
+    : p.authorName;
+  card.querySelector(".poem-body").textContent = p.body || "";
+  return card;
+}
+
+// ---------- editor ----------
+$("new-draft-btn").addEventListener("click", () => openEditor(null));
+$("close-editor-btn").addEventListener("click", closeEditor);
+
+function openEditor(poem) {
+  editingPoemId = poem ? poem.id : null;
+  editorTitle.value = poem ? poem.title : "";
+  editorBody.value = poem ? poem.body : "";
+  editorStatus.textContent = "";
+  $("delete-poem-btn").classList.toggle("is-hidden", !poem);
+  editor.classList.remove("is-hidden");
+  editorTitle.focus();
+}
+
+function closeEditor() {
+  editor.classList.add("is-hidden");
+  editingPoemId = null;
+}
+
+$("save-draft-btn").addEventListener("click", () => savePoem("draft"));
+$("publish-btn").addEventListener("click", () => savePoem("published"));
+
+async function savePoem(status) {
+  const title = editorTitle.value.trim();
+  const body = editorBody.value.trim();
+  if (!body) {
+    editorStatus.textContent = "Write something first.";
+    return;
+  }
+
+  const data = {
+    title,
+    body,
+    status,
+    authorUid: currentUser.uid,
+    authorName: currentProfile.name,
+    authorEmail: currentProfile.email,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (status === "published") {
+    data.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
+  }
+
+  try {
+    if (editingPoemId) {
+      await db.collection("poems").doc(editingPoemId).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      const ref = await db.collection("poems").add(data);
+      editingPoemId = ref.id;
+    }
+
+    if (status === "published") {
+      editorStatus.textContent = "Published.";
+      await notifyPartner(title);
+      if (selectedAuthor === currentProfile.name) loadPublishedPoems();
+    } else {
+      editorStatus.textContent = "Draft saved.";
+    }
+    loadDrafts();
+  } catch (err) {
+    editorStatus.textContent = "Couldn't save: " + err.message;
+  }
+}
+
+$("delete-poem-btn").addEventListener("click", async () => {
+  if (!editingPoemId) return;
+  if (!confirm("Delete this poem for good?")) return;
+  await db.collection("poems").doc(editingPoemId).delete();
+  closeEditor();
+  loadDrafts();
+  loadPublishedPoems();
+});
+
+// ---------- drafts list ----------
+async function loadDrafts() {
+  draftsList.innerHTML = "";
+  draftsEmpty.classList.add("is-hidden");
+  const snap = await db.collection("poems")
+    .where("authorUid", "==", currentUser.uid)
+    .where("status", "==", "draft")
+    .orderBy("updatedAt", "desc")
+    .get();
+
+  if (snap.empty) {
+    draftsEmpty.classList.remove("is-hidden");
+    return;
+  }
+  snap.forEach(docSnap => {
+    const p = { id: docSnap.id, ...docSnap.data() };
+    const row = document.createElement("div");
+    row.className = "draft-row";
+    row.innerHTML = `
+      <span class="draft-row-title ${p.title ? "" : "untitled"}"></span>
+      <button class="btn btn-ghost">Open</button>
+    `;
+    row.querySelector(".draft-row-title").textContent = p.title || "Untitled draft";
+    row.querySelector("button").addEventListener("click", () => openEditor(p));
+    draftsList.appendChild(row);
+  });
+}
+
+// ---------- notification email ----------
+async function notifyPartner(title) {
+  if (typeof emailjs === "undefined" || emailjsConfig.publicKey === "PASTE_ME") return;
+  if (!currentProfile.partnerEmail) return;
+  try {
+    await emailjs.send(emailjsConfig.serviceId, emailjsConfig.templateId, {
+      to_email: currentProfile.partnerEmail,
+      from_name: currentProfile.name,
+      poem_title: title || "Untitled",
+    });
+  } catch (err) {
+    console.warn("Notification email failed:", err);
+  }
+}

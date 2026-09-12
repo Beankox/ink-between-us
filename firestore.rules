@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each user's own profile: name, email, partner's email
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Poems: published ones are readable by any signed-in user (i.e. the two of you).
+    // Drafts are only readable/writable by the person who wrote them.
+    match /poems/{poemId} {
+      allow read: if request.auth != null &&
+                    (resource.data.status == "published" ||
+                     resource.data.authorUid == request.auth.uid);
+
+      allow create: if request.auth != null &&
+                      request.resource.data.authorUid == request.auth.uid;
+
+      allow update, delete: if request.auth != null &&
+                              resource.data.authorUid == request.auth.uid;
+    }
+  }
+}
