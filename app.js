@@ -173,7 +173,8 @@ function renderPoemCard(p) {
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
     <button class="heart-btn" type="button" aria-label="Like this poem">
-      ♥ <span class="heart-count"></span>
+      <span class="heart-icon">♡</span>
+      <span class="heart-count"></span>
     </button>
     ${isOwner ? `
       <div class="poem-card-actions">
@@ -244,11 +245,19 @@ async function deletePoemDirect(poemId) {
 }
 
 // ---------- heart / like ----------
-function updateHeartUI(btnEl, likedByArr, uid) {
-  const isLiked = uid && likedByArr.includes(uid);
-  btnEl.classList.toggle("is-liked", !!isLiked);
+function updateHeartUI(btnEl, likedByArr, uid, animate) {
+  const isLiked = !!(uid && likedByArr.includes(uid));
+  btnEl.classList.toggle("is-liked", isLiked);
+  const iconEl = btnEl.querySelector(".heart-icon");
+  iconEl.textContent = isLiked ? "♥" : "♡";
   const countEl = btnEl.querySelector(".heart-count");
   countEl.textContent = likedByArr.length > 0 ? likedByArr.length : "";
+
+  if (animate) {
+    iconEl.classList.remove("heart-pop");
+    void iconEl.offsetWidth; // restart the animation even if clicked twice quickly
+    iconEl.classList.add("heart-pop");
+  }
 }
 
 function toggleLike(poemId, likedByArr, btnEl) {
@@ -260,7 +269,7 @@ function toggleLike(poemId, likedByArr, btnEl) {
   // optimistic update — feels instant, we correct it below if the save fails
   if (isLiked) likedByArr.splice(idx, 1);
   else likedByArr.push(uid);
-  updateHeartUI(btnEl, likedByArr, uid);
+  updateHeartUI(btnEl, likedByArr, uid, true);
 
   db.collection("poems").doc(poemId).update({
     likedBy: isLiked
@@ -270,7 +279,7 @@ function toggleLike(poemId, likedByArr, btnEl) {
     // revert on failure
     if (isLiked) likedByArr.push(uid);
     else likedByArr.splice(likedByArr.indexOf(uid), 1);
-    updateHeartUI(btnEl, likedByArr, uid);
+    updateHeartUI(btnEl, likedByArr, uid, false);
     alert("Couldn't update like: " + err.message);
   });
 }
