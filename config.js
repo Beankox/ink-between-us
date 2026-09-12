@@ -19,3 +19,10 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+// 2) EmailJS config (emailjs.com → Account → General, and your Email Template)
+const emailjsConfig = {
+  publicKey: "PASTE_ME",
+  serviceId: "PASTE_ME",
+  templateId: "PASTE_ME"
+};
