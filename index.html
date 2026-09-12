@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Ink Between Us</title>
-<meta name="theme-color" content="#F7F1E8" />
+<title>Ink & Quests</title>
+<meta name="theme-color" content="#F3EFDE" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="Ink Between Us" />
+<meta name="apple-mobile-web-app-title" content="Ink & Quests" />
 <link rel="apple-touch-icon" href="icon.png" />
 <link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -19,13 +19,13 @@
   <!-- ============ AUTH SCREEN ============ -->
   <div id="auth-screen" class="auth-wrap">
     <div class="auth-card">
-      <p class="auth-mark">Ink Between Us</p>
-      <h1 class="auth-title">A page for two.</h1>
-      <p class="auth-sub">Write for each other. Read what's been written for you.</p>
+      <p class="auth-mark">🍃 Ink &amp; Quests</p>
+      <h1 class="auth-title">A little quest log for two.</h1>
+      <p class="auth-sub">Write a poem, tuck it away as a quest-in-progress, or turn it in for them to find.</p>
 
       <div class="auth-tabs">
         <button class="auth-tab is-active" data-tab="login">Log in</button>
-        <button class="auth-tab" data-tab="signup">Start writing</button>
+        <button class="auth-tab" data-tab="signup">Start my log</button>
       </div>
 
       <!-- LOGIN -->
@@ -44,7 +44,7 @@
       <form id="signup-form" class="auth-form is-hidden">
         <label>Your name on this page
           <select id="signup-name" required>
-            <option value="" disabled selected>Choose who's writing</option>
+            <option value="" disabled selected>Choose your character</option>
             <option value="Bea">Bea</option>
             <option value="Abegail">Abegail</option>
           </select>
@@ -58,7 +58,7 @@
         <label>Your lover's email
           <input type="email" id="signup-partner-email" required autocomplete="off" placeholder="so we know who to notify" />
         </label>
-        <button type="submit" class="btn btn-primary">Create my page</button>
+        <button type="submit" class="btn btn-primary">Begin my quest log</button>
         <p class="auth-error" id="signup-error"></p>
       </form>
     </div>
@@ -67,7 +67,7 @@
   <!-- ============ APP SCREEN ============ -->
   <div id="app-screen" class="app-wrap is-hidden">
     <header class="app-header">
-      <p class="app-mark">Ink Between Us</p>
+      <p class="app-mark">🍃 Ink &amp; Quests</p>
       <div class="app-header-right">
         <span id="whoami" class="whoami"></span>
         <button id="logout-btn" class="btn btn-ghost">Log out</button>
@@ -76,15 +76,15 @@
 
     <!-- Slider between the two authors -->
     <nav class="reader-toggle" id="reader-toggle">
-      <button class="reader-toggle-btn" data-author="Bea">Bea's poems</button>
-      <button class="reader-toggle-btn" data-author="Abegail">Abegail's poems</button>
+      <button class="reader-toggle-btn" data-author="Bea">Bea's quest log</button>
+      <button class="reader-toggle-btn" data-author="Abegail">Abegail's quest log</button>
       <span class="reader-toggle-thumb" id="reader-thumb"></span>
     </nav>
 
     <!-- Published poems for the selected author -->
     <section id="reader-view" class="reader-view">
       <div id="poems-list" class="poems-list"></div>
-      <p id="poems-empty" class="empty-note is-hidden">Nothing published here yet — the page is still blank, waiting.</p>
+      <p id="poems-empty" class="empty-note is-hidden">🌱 No quests turned in yet — this log is still waiting to be filled.</p>
     </section>
 
     <hr class="divider" />
@@ -92,26 +92,26 @@
     <!-- Writing desk -->
     <section class="desk">
       <div class="desk-head">
-        <h2>Your writing desk</h2>
-        <button id="new-draft-btn" class="btn btn-primary">New poem</button>
+        <h2>🧺 Your quest board</h2>
+        <button id="new-draft-btn" class="btn btn-primary">+ New quest</button>
       </div>
 
       <div id="editor" class="editor is-hidden">
-        <input type="text" id="editor-title" placeholder="Title" maxlength="120" />
-        <textarea id="editor-body" placeholder="Start writing…" rows="10"></textarea>
+        <input type="text" id="editor-title" placeholder="Quest name" maxlength="120" />
+        <textarea id="editor-body" placeholder="What's this quest about?" rows="10"></textarea>
         <div class="editor-actions">
-          <button id="save-draft-btn" class="btn btn-secondary">Save draft</button>
-          <button id="publish-btn" class="btn btn-primary">Publish to them</button>
-          <button id="delete-poem-btn" class="btn btn-ghost is-hidden">Delete</button>
+          <button id="save-draft-btn" class="btn btn-secondary">Save progress</button>
+          <button id="publish-btn" class="btn btn-primary">Turn in quest 🎁</button>
+          <button id="delete-poem-btn" class="btn btn-ghost is-hidden">Abandon quest</button>
           <button id="close-editor-btn" class="btn btn-ghost">Close</button>
         </div>
         <p class="editor-status" id="editor-status"></p>
       </div>
 
       <div class="drafts-block">
-        <h3>Your drafts</h3>
+        <h3>🗒️ Quests in progress</h3>
         <div id="drafts-list" class="drafts-list"></div>
-        <p id="drafts-empty" class="empty-note is-hidden">No drafts sitting around. A blank page is up there waiting.</p>
+        <p id="drafts-empty" class="empty-note is-hidden">Nothing on the board yet. Start a new quest whenever inspiration strikes.</p>
       </div>
     </section>
   </div>
