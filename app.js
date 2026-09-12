@@ -172,18 +172,170 @@ function renderPoemCard(p) {
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
+    <button class="heart-btn" type="button" aria-label="Like this poem">
+      ♥ <span class="heart-count"></span>
+    </button>
+    ${isOwner ? `
+      <div class="poem-card-actions">
+        <button class="btn btn-ghost poem-edit-btn" type="button">Edit</button>
+        <button class="btn btn-ghost poem-delete-btn" type="button">Delete</button>
+      </div>
+    ` : ""}
+    <div class="poem-comments">
+      <button class="btn btn-ghost comments-toggle-btn" type="button">💬 Comments</button>
+      <div class="comments-section is-hidden">
+        <div class="comments-list"></div>
+        <form class="comment-form">
+          <textarea class="comment-input" rows="2" placeholder="Leave a comment..." required></textarea>
+          <button class="btn btn-primary" type="submit">Post</button>
+        </form>
+      </div>
+    </div>
   `;
   card.querySelector(".poem-title").textContent = p.title || "Untitled";
   card.querySelector(".poem-meta").textContent = metaText;
   card.querySelector(".poem-body").textContent = p.body || "";
 
+  // ---- heart / like wiring ----
+  const likedBy = p.likedBy ? [...p.likedBy] : []; // local mutable copy for optimistic UI
+  const heartBtn = card.querySelector(".heart-btn");
+  updateHeartUI(heartBtn, likedBy, currentUser ? currentUser.uid : null);
+  heartBtn.addEventListener("click", () => toggleLike(p.id, likedBy, heartBtn));
+
   if (isOwner) {
-    card.style.cursor = "pointer";
-    card.title = "Tap to edit or delete";
-    card.addEventListener("click", () => openEditor(p));
+    card.querySelector(".poem-edit-btn").addEventListener("click", () => openEditor(p));
+    card.querySelector(".poem-delete-btn").addEventListener("click", () => deletePoemDirect(p.id));
   }
 
+  // ---- comments wiring ----
+  const commentsToggleBtn = card.querySelector(".comments-toggle-btn");
+  const commentsSection = card.querySelector(".comments-section");
+  const commentsList = card.querySelector(".comments-list");
+  const commentForm = card.querySelector(".comment-form");
+  const commentInput = card.querySelector(".comment-input");
+  let commentsLoaded = false;
+
+  commentsToggleBtn.addEventListener("click", () => {
+    commentsSection.classList.toggle("is-hidden");
+    if (!commentsSection.classList.contains("is-hidden") && !commentsLoaded) {
+      commentsLoaded = true;
+      loadComments(p.id, commentsList);
+    }
+  });
+
+  commentForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    addComment(p.id, commentInput.value, commentsList, commentForm);
+  });
+
   return card;
+}
+
+// ---------- direct delete from a poem card (no need to open the editor first) ----------
+async function deletePoemDirect(poemId) {
+  if (!confirm("Delete this poem for good?")) return;
+  try {
+    await db.collection("poems").doc(poemId).delete();
+    loadDrafts();
+    loadPublishedPoems();
+  } catch (err) {
+    alert("Couldn't delete: " + err.message);
+  }
+}
+
+// ---------- heart / like ----------
+function updateHeartUI(btnEl, likedByArr, uid) {
+  const isLiked = uid && likedByArr.includes(uid);
+  btnEl.classList.toggle("is-liked", !!isLiked);
+  const countEl = btnEl.querySelector(".heart-count");
+  countEl.textContent = likedByArr.length > 0 ? likedByArr.length : "";
+}
+
+function toggleLike(poemId, likedByArr, btnEl) {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+  const idx = likedByArr.indexOf(uid);
+  const isLiked = idx !== -1;
+
+  // optimistic update — feels instant, we correct it below if the save fails
+  if (isLiked) likedByArr.splice(idx, 1);
+  else likedByArr.push(uid);
+  updateHeartUI(btnEl, likedByArr, uid);
+
+  db.collection("poems").doc(poemId).update({
+    likedBy: isLiked
+      ? firebase.firestore.FieldValue.arrayRemove(uid)
+      : firebase.firestore.FieldValue.arrayUnion(uid)
+  }).catch(err => {
+    // revert on failure
+    if (isLiked) likedByArr.push(uid);
+    else likedByArr.splice(likedByArr.indexOf(uid), 1);
+    updateHeartUI(btnEl, likedByArr, uid);
+    alert("Couldn't update like: " + err.message);
+  });
+}
+
+// ---------- comments ----------
+async function loadComments(poemId, listEl) {
+  listEl.innerHTML = '<p class="comments-empty">Loading...</p>';
+  try {
+    const snap = await db.collection("poems").doc(poemId)
+      .collection("comments").orderBy("createdAt", "asc").get();
+
+    listEl.innerHTML = "";
+    if (snap.empty) {
+      listEl.innerHTML = '<p class="comments-empty">No comments yet.</p>';
+      return;
+    }
+    snap.forEach(docSnap => {
+      const c = { id: docSnap.id, ...docSnap.data() };
+      listEl.appendChild(renderCommentRow(c, poemId));
+    });
+  } catch (err) {
+    listEl.innerHTML = `<p class="comments-empty">Couldn't load comments: ${err.message}</p>`;
+  }
+}
+
+function renderCommentRow(c, poemId) {
+  const row = document.createElement("div");
+  row.className = "comment-row";
+  const date = c.createdAt?.toDate ? c.createdAt.toDate() : null;
+  const isMine = currentUser && c.authorUid === currentUser.uid;
+
+  row.innerHTML = `
+    <p class="comment-author"></p>
+    <p class="comment-text"></p>
+    ${isMine ? '<button class="btn btn-ghost comment-delete-btn" type="button">Delete</button>' : ""}
+  `;
+  row.querySelector(".comment-author").textContent = date
+    ? `${c.authorName} · ${date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+    : c.authorName;
+  row.querySelector(".comment-text").textContent = c.text;
+
+  if (isMine) {
+    row.querySelector(".comment-delete-btn").addEventListener("click", async () => {
+      if (!confirm("Delete this comment?")) return;
+      await db.collection("poems").doc(poemId).collection("comments").doc(c.id).delete();
+      row.remove();
+    });
+  }
+  return row;
+}
+
+async function addComment(poemId, text, listEl, formEl) {
+  if (!text.trim()) return;
+  try {
+    await db.collection("poems").doc(poemId).collection("comments").add({
+      text: text.trim(),
+      authorName: currentProfile.name,
+      authorUid: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    formEl.reset();
+    loadComments(poemId, listEl);
+  } catch (err) {
+    alert("Couldn't post comment: " + err.message);
+  }
 }
 
 // ---------- editor ----------
@@ -314,4 +466,3 @@ async function notifyPartner(title) {
     console.warn("Notification email failed:", err);
   }
 }
-      
