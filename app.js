@@ -13,6 +13,7 @@ let currentUser = null;   // firebase auth user
 let currentProfile = null; // { name, email, partnerEmail }
 let selectedAuthor = "Bea";
 let editingPoemId = null; // null = new poem
+let editingPoemOriginalStatus = null; // tracks whether we're editing an already-published poem
 
 // ---------- element refs ----------
 const $ = (id) => document.getElementById(id);
@@ -139,7 +140,7 @@ async function loadPublishedPoems() {
       return;
     }
     snap.forEach(docSnap => {
-      const p = docSnap.data();
+      const p = { id: docSnap.id, ...docSnap.data() };
       poemsList.appendChild(renderPoemCard(p));
     });
   } catch (err) {
@@ -151,17 +152,37 @@ async function loadPublishedPoems() {
 function renderPoemCard(p) {
   const card = document.createElement("article");
   card.className = "poem-card";
-  const date = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
+  const isOwner = currentProfile && p.authorName === currentProfile.name;
+  if (isOwner) card.classList.add("poem-card-owned");
+
+  const publishedDate = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
+  const editedDate = p.editedAt?.toDate ? p.editedAt.toDate() : null;
+
+  const fmt = (d) => d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+
+  let metaText = p.authorName;
+  if (publishedDate) {
+    metaText += ` · ${fmt(publishedDate)}`;
+    if (editedDate) {
+      metaText += ` - Edited on ${fmt(editedDate)}`;
+    }
+  }
+
   card.innerHTML = `
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
   `;
   card.querySelector(".poem-title").textContent = p.title || "Untitled";
-  card.querySelector(".poem-meta").textContent = date
-    ? `${p.authorName} · ${date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`
-    : p.authorName;
+  card.querySelector(".poem-meta").textContent = metaText;
   card.querySelector(".poem-body").textContent = p.body || "";
+
+  if (isOwner) {
+    card.style.cursor = "pointer";
+    card.title = "Tap to edit or delete";
+    card.addEventListener("click", () => openEditor(p));
+  }
+
   return card;
 }
 
@@ -171,6 +192,7 @@ $("close-editor-btn").addEventListener("click", closeEditor);
 
 function openEditor(poem) {
   editingPoemId = poem ? poem.id : null;
+  editingPoemOriginalStatus = poem ? poem.status : null;
   editorTitle.value = poem ? poem.title : "";
   editorBody.value = poem ? poem.body : "";
   editorStatus.textContent = "";
@@ -182,6 +204,7 @@ function openEditor(poem) {
 function closeEditor() {
   editor.classList.add("is-hidden");
   editingPoemId = null;
+  editingPoemOriginalStatus = null;
 }
 
 $("save-draft-btn").addEventListener("click", () => savePoem("draft"));
@@ -204,8 +227,14 @@ async function savePoem(status) {
     authorEmail: currentProfile.email,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+
   if (status === "published") {
-    data.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
+    const wasAlreadyPublished = editingPoemOriginalStatus === "published";
+    if (wasAlreadyPublished) {
+      data.editedAt = firebase.firestore.FieldValue.serverTimestamp();
+    } else {
+      data.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
   }
 
   try {
@@ -219,7 +248,11 @@ async function savePoem(status) {
 
     if (status === "published") {
       editorStatus.textContent = "Published.";
-      await notifyPartner(title);
+      const isFreshPublish = editingPoemOriginalStatus !== "published";
+      if (isFreshPublish) {
+        await notifyPartner(title);
+      }
+      editingPoemOriginalStatus = "published";
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
     } else {
       editorStatus.textContent = "Draft saved.";
@@ -281,3 +314,4 @@ async function notifyPartner(title) {
     console.warn("Notification email failed:", err);
   }
 }
+      
