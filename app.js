@@ -153,11 +153,28 @@ function renderPoemCard(p) {
   card.className = "poem-card";
   const date = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
   const isMine = currentUser && p.authorUid === currentUser.uid;
+  const likedBy = p.likedBy || [];
+  const isLiked = currentUser && likedBy.includes(currentUser.uid);
+  const likeCount = typeof p.likeCount === "number" ? p.likeCount : likedBy.length;
 
   card.innerHTML = `
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
+    <button type="button" class="heart-btn ${isLiked ? "is-liked" : ""}">
+      <span class="heart-icon">${isLiked ? "💚" : "🤍"}</span>
+      <span class="heart-count">${likeCount}</span>
+    </button>
+    <div class="poem-comments">
+      <button type="button" class="comments-toggle-btn">💬 Comments</button>
+      <div class="comments-section is-hidden">
+        <div class="comments-list"></div>
+        <form class="comment-form">
+          <textarea class="comment-input" rows="2" placeholder="Leave a little note…" required></textarea>
+          <button type="submit" class="btn btn-secondary">Send</button>
+        </form>
+      </div>
+    </div>
     ${isMine ? `
     <div class="poem-card-actions">
       <button type="button" class="btn btn-secondary poem-edit-btn">✏️ Edit</button>
@@ -170,6 +187,39 @@ function renderPoemCard(p) {
     : p.authorName;
   card.querySelector(".poem-body").textContent = p.body || "";
 
+  // ---- heart / like ----
+  const heartBtn = card.querySelector(".heart-btn");
+  heartBtn.addEventListener("click", () => toggleLike(p, heartBtn));
+
+  // ---- comments (lazy-loaded on first open) ----
+  const commentsToggle = card.querySelector(".comments-toggle-btn");
+  const commentsSection = card.querySelector(".comments-section");
+  const commentsList = card.querySelector(".comments-list");
+  let commentsLoaded = false;
+  commentsToggle.addEventListener("click", () => {
+    commentsSection.classList.toggle("is-hidden");
+    if (!commentsSection.classList.contains("is-hidden") && !commentsLoaded) {
+      commentsLoaded = true;
+      loadComments(p.id, commentsList);
+    }
+  });
+
+  const commentForm = card.querySelector(".comment-form");
+  commentForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = commentForm.querySelector(".comment-input");
+    const text = input.value.trim();
+    if (!text) return;
+    await db.collection("poems").doc(p.id).collection("comments").add({
+      text,
+      authorUid: currentUser.uid,
+      authorName: currentProfile.name,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = "";
+    loadComments(p.id, commentsList);
+  });
+
   if (isMine) {
     card.querySelector(".poem-edit-btn").addEventListener("click", () => openEditor(p));
     card.querySelector(".poem-delete-btn").addEventListener("click", async () => {
@@ -179,6 +229,74 @@ function renderPoemCard(p) {
     });
   }
   return card;
+}
+
+// ---------- likes ----------
+async function toggleLike(p, heartBtn) {
+  const ref = db.collection("poems").doc(p.id);
+  const likedBy = p.likedBy || [];
+  const isLiked = likedBy.includes(currentUser.uid);
+  try {
+    if (isLiked) {
+      await ref.update({
+        likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+        likeCount: firebase.firestore.FieldValue.increment(-1)
+      });
+      p.likedBy = likedBy.filter(uid => uid !== currentUser.uid);
+    } else {
+      await ref.update({
+        likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+        likeCount: firebase.firestore.FieldValue.increment(1)
+      });
+      p.likedBy = [...likedBy, currentUser.uid];
+    }
+    p.likeCount = p.likedBy.length;
+    heartBtn.classList.toggle("is-liked");
+    const icon = heartBtn.querySelector(".heart-icon");
+    icon.textContent = heartBtn.classList.contains("is-liked") ? "💚" : "🤍";
+    heartBtn.querySelector(".heart-count").textContent = p.likeCount;
+    icon.classList.remove("heart-pop");
+    void icon.offsetWidth;
+    icon.classList.add("heart-pop");
+  } catch (err) {
+    console.warn("Like failed:", err);
+  }
+}
+
+// ---------- comments ----------
+async function loadComments(poemId, container) {
+  container.innerHTML = `<p class="comments-empty">Loading…</p>`;
+  try {
+    const snap = await db.collection("poems").doc(poemId).collection("comments")
+      .orderBy("createdAt", "asc").get();
+    container.innerHTML = "";
+    if (snap.empty) {
+      container.innerHTML = `<p class="comments-empty">No notes yet — be the first to leave one.</p>`;
+      return;
+    }
+    snap.forEach(docSnap => {
+      const c = { id: docSnap.id, ...docSnap.data() };
+      const row = document.createElement("div");
+      row.className = "comment-row";
+      row.innerHTML = `<p class="comment-author"></p><p class="comment-text"></p>`;
+      row.querySelector(".comment-author").textContent = c.authorName || "Someone";
+      row.querySelector(".comment-text").textContent = c.text || "";
+      if (currentUser && c.authorUid === currentUser.uid) {
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "btn btn-ghost comment-delete-btn";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", async () => {
+          await db.collection("poems").doc(poemId).collection("comments").doc(c.id).delete();
+          loadComments(poemId, container);
+        });
+        row.appendChild(delBtn);
+      }
+      container.appendChild(row);
+    });
+  } catch (err) {
+    container.innerHTML = `<p class="comments-empty">Couldn't load comments: ${err.message}</p>`;
+  }
 }
 
 // ---------- editor ----------
