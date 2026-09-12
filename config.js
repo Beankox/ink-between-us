@@ -1,21 +1,21 @@
-// ============================================================
-// FILL THIS FILE IN — it's the only file you need to edit.
-// See README.md for exactly where each value comes from.
-// ============================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// 1) Firebase project config (Firebase console → Project settings → your web app)
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "PASTE_ME",
-  authDomain: "PASTE_ME",
-  projectId: "PASTE_ME",
-  storageBucket: "PASTE_ME",
-  messagingSenderId: "PASTE_ME",
-  appId: "PASTE_ME"
+  apiKey: "AIzaSyD9Y0L7K-GjtPdiPF9k_coq4IeY-9Hrvec",
+  authDomain: "in-between-us-d7586.firebaseapp.com",
+  projectId: "in-between-us-d7586",
+  storageBucket: "in-between-us-d7586.firebasestorage.app",
+  messagingSenderId: "85543012727",
+  appId: "1:85543012727:web:180a073b5ad03a3adf3972",
+  measurementId: "G-PHKWYN2Z2Y"
 };
 
-// 2) EmailJS config (emailjs.com → Account → General, and your Email Template)
-const emailjsConfig = {
-  publicKey: "PASTE_ME",
-  serviceId: "PASTE_ME",
-  templateId: "PASTE_ME"
-};
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
