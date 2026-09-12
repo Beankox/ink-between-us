@@ -11,6 +11,6 @@ const firebaseConfig = {
 // 2) EmailJS config (emailjs.com → Account → General, and your Email Template)
 const emailjsConfig = {
   publicKey: "E_urydW_C8yECrTHj",
-  serviceId: "template_vzi91gm",
-  templateId: "service_0pc6kjy"
+  serviceId: "service_0pc6kjy",
+  templateId: "template_vzi91gm"
 };
