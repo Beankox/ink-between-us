@@ -244,8 +244,16 @@ input, select, textarea{
 
 /* ---------- poem card actions (edit/delete) ---------- */
 .poem-card-actions{
-  display:flex; gap:0.5rem; margin-top:1rem;
+  display:flex; gap:0.6rem; margin-top:1.1rem;
+  padding-top: 0.9rem;
+  border-top: 2px dashed var(--rule);
 }
+.btn-danger{
+  background: #E8A98F; color: #5C2A1D; border-color: #D9765A;
+  box-shadow: 0 3px 0 #C97A5C;
+}
+.btn-danger:hover{ background: #E09679; }
+.btn-danger:active{ box-shadow: 0 1px 0 #C97A5C; transform: translateY(2px) scale(0.98); }
 
 /* ---------- heart / cheer ---------- */
 .heart-btn{
