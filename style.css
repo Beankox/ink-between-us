@@ -149,7 +149,7 @@ input, select, textarea{
   transition: transform .25s ease;
 }
 
-/* ---------- poems (quest cards) ---------- */
+/* ---------- poems ---------- */
 .reader-view{ min-height: 4rem; }
 .poems-list{ display:flex; flex-direction:column; gap: 1.5rem; }
 .poem-card{
@@ -160,7 +160,7 @@ input, select, textarea{
   position: relative;
 }
 .poem-card::before{
-  content: "✦ completed quest";
+  content: "✦ published";
   display: inline-block;
   font-family: var(--display);
   font-size: 0.7rem;
