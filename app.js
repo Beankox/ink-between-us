@@ -13,7 +13,6 @@ let currentUser = null;   // firebase auth user
 let currentProfile = null; // { name, email, partnerEmail }
 let selectedAuthor = "Bea";
 let editingPoemId = null; // null = new poem
-let editingPoemOriginalStatus = null; // tracks whether we're editing an already-published poem
 
 // ---------- element refs ----------
 const $ = (id) => document.getElementById(id);
@@ -152,199 +151,34 @@ async function loadPublishedPoems() {
 function renderPoemCard(p) {
   const card = document.createElement("article");
   card.className = "poem-card";
-  const isOwner = currentProfile && p.authorName === currentProfile.name;
-  if (isOwner) card.classList.add("poem-card-owned");
-
-  const publishedDate = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
-  const editedDate = p.editedAt?.toDate ? p.editedAt.toDate() : null;
-
-  const fmt = (d) => d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-
-  let metaText = p.authorName;
-  if (publishedDate) {
-    metaText += ` · ${fmt(publishedDate)}`;
-    if (editedDate) {
-      metaText += ` - Edited on ${fmt(editedDate)}`;
-    }
-  }
+  const date = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
+  const isMine = currentUser && p.authorUid === currentUser.uid;
 
   card.innerHTML = `
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
-    <button class="heart-btn" type="button" aria-label="Like this poem">
-      <span class="heart-icon">♡</span>
-      <span class="heart-count"></span>
-    </button>
-    ${isOwner ? `
-      <div class="poem-card-actions">
-        <button class="btn btn-ghost poem-edit-btn" type="button">Edit</button>
-        <button class="btn btn-ghost poem-delete-btn" type="button">Delete</button>
-      </div>
-    ` : ""}
-    <div class="poem-comments">
-      <button class="btn btn-ghost comments-toggle-btn" type="button">💬 Comments</button>
-      <div class="comments-section is-hidden">
-        <div class="comments-list"></div>
-        <form class="comment-form">
-          <textarea class="comment-input" rows="2" placeholder="Leave a comment..." required></textarea>
-          <button class="btn btn-primary" type="submit">Post</button>
-        </form>
-      </div>
-    </div>
+    ${isMine ? `
+    <div class="poem-card-actions">
+      <button type="button" class="btn btn-secondary poem-edit-btn">✏️ Edit</button>
+      <button type="button" class="btn btn-danger poem-delete-btn">🗑️ Delete</button>
+    </div>` : ""}
   `;
   card.querySelector(".poem-title").textContent = p.title || "Untitled";
-  card.querySelector(".poem-meta").textContent = metaText;
+  card.querySelector(".poem-meta").textContent = date
+    ? `${p.authorName} · ${date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`
+    : p.authorName;
   card.querySelector(".poem-body").textContent = p.body || "";
 
-  // ---- heart / like wiring ----
-  const likedBy = p.likedBy ? [...p.likedBy] : []; // local mutable copy for optimistic UI
-  const heartBtn = card.querySelector(".heart-btn");
-  updateHeartUI(heartBtn, likedBy, currentUser ? currentUser.uid : null);
-  heartBtn.addEventListener("click", () => toggleLike(p.id, likedBy, heartBtn));
-
-  if (isOwner) {
-    card.querySelector(".poem-edit-btn").addEventListener("click", () => openEditor(p));
-    card.querySelector(".poem-delete-btn").addEventListener("click", () => deletePoemDirect(p.id));
-  }
-
-  // ---- comments wiring ----
-  const commentsToggleBtn = card.querySelector(".comments-toggle-btn");
-  const commentsSection = card.querySelector(".comments-section");
-  const commentsList = card.querySelector(".comments-list");
-  const commentForm = card.querySelector(".comment-form");
-  const commentInput = card.querySelector(".comment-input");
-  let commentsLoaded = false;
-
-  commentsToggleBtn.addEventListener("click", () => {
-    commentsSection.classList.toggle("is-hidden");
-    if (!commentsSection.classList.contains("is-hidden") && !commentsLoaded) {
-      commentsLoaded = true;
-      loadComments(p.id, commentsList);
-    }
-  });
-
-  commentForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    addComment(p.id, commentInput.value, commentsList, commentForm);
-  });
-
-  return card;
-}
-
-// ---------- direct delete from a poem card (no need to open the editor first) ----------
-async function deletePoemDirect(poemId) {
-  if (!confirm("Delete this poem for good?")) return;
-  try {
-    await db.collection("poems").doc(poemId).delete();
-    loadDrafts();
-    loadPublishedPoems();
-  } catch (err) {
-    alert("Couldn't delete: " + err.message);
-  }
-}
-
-// ---------- heart / like ----------
-function updateHeartUI(btnEl, likedByArr, uid, animate) {
-  const isLiked = !!(uid && likedByArr.includes(uid));
-  btnEl.classList.toggle("is-liked", isLiked);
-  const iconEl = btnEl.querySelector(".heart-icon");
-  iconEl.textContent = isLiked ? "♥" : "♡";
-  const countEl = btnEl.querySelector(".heart-count");
-  countEl.textContent = likedByArr.length > 0 ? likedByArr.length : "";
-
-  if (animate) {
-    iconEl.classList.remove("heart-pop");
-    void iconEl.offsetWidth; // restart the animation even if clicked twice quickly
-    iconEl.classList.add("heart-pop");
-  }
-}
-
-function toggleLike(poemId, likedByArr, btnEl) {
-  if (!currentUser) return;
-  const uid = currentUser.uid;
-  const idx = likedByArr.indexOf(uid);
-  const isLiked = idx !== -1;
-
-  // optimistic update — feels instant, we correct it below if the save fails
-  if (isLiked) likedByArr.splice(idx, 1);
-  else likedByArr.push(uid);
-  updateHeartUI(btnEl, likedByArr, uid, true);
-
-  db.collection("poems").doc(poemId).update({
-    likedBy: isLiked
-      ? firebase.firestore.FieldValue.arrayRemove(uid)
-      : firebase.firestore.FieldValue.arrayUnion(uid)
-  }).catch(err => {
-    // revert on failure
-    if (isLiked) likedByArr.push(uid);
-    else likedByArr.splice(likedByArr.indexOf(uid), 1);
-    updateHeartUI(btnEl, likedByArr, uid, false);
-    alert("Couldn't update like: " + err.message);
-  });
-}
-
-// ---------- comments ----------
-async function loadComments(poemId, listEl) {
-  listEl.innerHTML = '<p class="comments-empty">Loading...</p>';
-  try {
-    const snap = await db.collection("poems").doc(poemId)
-      .collection("comments").orderBy("createdAt", "asc").get();
-
-    listEl.innerHTML = "";
-    if (snap.empty) {
-      listEl.innerHTML = '<p class="comments-empty">No comments yet.</p>';
-      return;
-    }
-    snap.forEach(docSnap => {
-      const c = { id: docSnap.id, ...docSnap.data() };
-      listEl.appendChild(renderCommentRow(c, poemId));
-    });
-  } catch (err) {
-    listEl.innerHTML = `<p class="comments-empty">Couldn't load comments: ${err.message}</p>`;
-  }
-}
-
-function renderCommentRow(c, poemId) {
-  const row = document.createElement("div");
-  row.className = "comment-row";
-  const date = c.createdAt?.toDate ? c.createdAt.toDate() : null;
-  const isMine = currentUser && c.authorUid === currentUser.uid;
-
-  row.innerHTML = `
-    <p class="comment-author"></p>
-    <p class="comment-text"></p>
-    ${isMine ? '<button class="btn btn-ghost comment-delete-btn" type="button">Delete</button>' : ""}
-  `;
-  row.querySelector(".comment-author").textContent = date
-    ? `${c.authorName} · ${date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
-    : c.authorName;
-  row.querySelector(".comment-text").textContent = c.text;
-
   if (isMine) {
-    row.querySelector(".comment-delete-btn").addEventListener("click", async () => {
-      if (!confirm("Delete this comment?")) return;
-      await db.collection("poems").doc(poemId).collection("comments").doc(c.id).delete();
-      row.remove();
+    card.querySelector(".poem-edit-btn").addEventListener("click", () => openEditor(p));
+    card.querySelector(".poem-delete-btn").addEventListener("click", async () => {
+      if (!confirm("Delete this poem for good? This can't be undone.")) return;
+      await db.collection("poems").doc(p.id).delete();
+      loadPublishedPoems();
     });
   }
-  return row;
-}
-
-async function addComment(poemId, text, listEl, formEl) {
-  if (!text.trim()) return;
-  try {
-    await db.collection("poems").doc(poemId).collection("comments").add({
-      text: text.trim(),
-      authorName: currentProfile.name,
-      authorUid: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    formEl.reset();
-    loadComments(poemId, listEl);
-  } catch (err) {
-    alert("Couldn't post comment: " + err.message);
-  }
+  return card;
 }
 
 // ---------- editor ----------
@@ -353,7 +187,6 @@ $("close-editor-btn").addEventListener("click", closeEditor);
 
 function openEditor(poem) {
   editingPoemId = poem ? poem.id : null;
-  editingPoemOriginalStatus = poem ? poem.status : null;
   editorTitle.value = poem ? poem.title : "";
   editorBody.value = poem ? poem.body : "";
   editorStatus.textContent = "";
@@ -365,7 +198,6 @@ function openEditor(poem) {
 function closeEditor() {
   editor.classList.add("is-hidden");
   editingPoemId = null;
-  editingPoemOriginalStatus = null;
 }
 
 $("save-draft-btn").addEventListener("click", () => savePoem("draft"));
@@ -388,14 +220,8 @@ async function savePoem(status) {
     authorEmail: currentProfile.email,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
-
   if (status === "published") {
-    const wasAlreadyPublished = editingPoemOriginalStatus === "published";
-    if (wasAlreadyPublished) {
-      data.editedAt = firebase.firestore.FieldValue.serverTimestamp();
-    } else {
-      data.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
-    }
+    data.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
   }
 
   try {
@@ -409,11 +235,7 @@ async function savePoem(status) {
 
     if (status === "published") {
       editorStatus.textContent = "Published.";
-      const isFreshPublish = editingPoemOriginalStatus !== "published";
-      if (isFreshPublish) {
-        await notifyPartner(title);
-      }
-      editingPoemOriginalStatus = "published";
+      await notifyPartner(title);
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
     } else {
       editorStatus.textContent = "Draft saved.";
