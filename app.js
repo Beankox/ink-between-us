@@ -136,10 +136,9 @@ function setSelectedAuthor(author) {
 
   setTimeout(async () => {
     await loadPublishedPoems();
-    // snap to the opposite side with no transition, then animate back to center
     readerView.style.transition = "none";
     readerView.style.transform = `translateX(${direction * 24}px)`;
-    void readerView.offsetWidth; // force reflow so the jump isn't animated
+    void readerView.offsetWidth;
     readerView.style.transition = "transform 0.22s ease, opacity 0.22s ease";
     readerView.style.transform = "translateX(0)";
     readerView.style.opacity = "1";
@@ -387,4 +386,60 @@ async function savePoem(status) {
   }
 }
 
-$("delete-poem-btn")
+$("delete-poem-btn").addEventListener("click", async () => {
+  if (!editingPoemId) return;
+  if (!confirm("Delete this poem for good?")) return;
+  await db.collection("poems").doc(editingPoemId).delete();
+  closeEditor();
+  loadDrafts();
+  loadPublishedPoems();
+});
+
+// ---------- drafts list ----------
+async function loadDrafts() {
+  draftsList.innerHTML = "";
+  draftsEmpty.classList.add("is-hidden");
+  try {
+    const snap = await db.collection("poems")
+      .where("authorUid", "==", currentUser.uid)
+      .where("status", "==", "draft")
+      .orderBy("updatedAt", "desc")
+      .get();
+
+    if (snap.empty) {
+      draftsEmpty.textContent = "No drafts sitting around. A blank page is up there waiting.";
+      draftsEmpty.classList.remove("is-hidden");
+      return;
+    }
+    snap.forEach(docSnap => {
+      const p = { id: docSnap.id, ...docSnap.data() };
+      const row = document.createElement("div");
+      row.className = "draft-row";
+      row.innerHTML = `
+        <span class="draft-row-title ${p.title ? "" : "untitled"}"></span>
+        <button class="btn btn-ghost">Open</button>
+      `;
+      row.querySelector(".draft-row-title").textContent = p.title || "Untitled draft";
+      row.querySelector("button").addEventListener("click", () => openEditor(p));
+      draftsList.appendChild(row);
+    });
+  } catch (err) {
+    draftsEmpty.textContent = "Couldn't load drafts: " + err.message;
+    draftsEmpty.classList.remove("is-hidden");
+  }
+}
+
+// ---------- notification email ----------
+async function notifyPartner(title) {
+  if (typeof emailjs === "undefined" || emailjsConfig.publicKey === "PASTE_ME") return;
+  if (!currentProfile.partnerEmail) return;
+  try {
+    await emailjs.send(emailjsConfig.serviceId, emailjsConfig.templateId, {
+      to_email: currentProfile.partnerEmail,
+      from_name: currentProfile.name,
+      poem_title: title || "Untitled",
+    });
+  } catch (err) {
+    console.warn("Notification email failed:", err);
+  }
+}
