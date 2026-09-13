@@ -316,6 +316,32 @@ input, select, textarea{
   font-size:0.92rem; resize: vertical;
 }
 .comment-form button{ align-self:flex-start; }
+
+/* ---------- slider switch animation ---------- */
+@keyframes slideInFromRight{
+  0%{ opacity: 0; transform: translateX(28px); }
+  100%{ opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInFromLeft{
+  0%{ opacity: 0; transform: translateX(-28px); }
+  100%{ opacity: 1; transform: translateX(0); }
+}
+.slide-in-right{ animation: slideInFromRight .32s cubic-bezier(.22,.9,.36,1); }
+.slide-in-left{ animation: slideInFromLeft .32s cubic-bezier(.22,.9,.36,1); }
+
+/* each poem card pops in with the same bouncy feel as your buttons */
+@keyframes cardPopIn{
+  0%{ opacity: 0; transform: scale(0.92) translateY(6px); }
+  100%{ opacity: 1; transform: scale(1) translateY(0); }
+}
+.poem-card{
+  animation: cardPopIn .32s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+.poems-list .poem-card:nth-child(1){ animation-delay: 0s; }
+.poems-list .poem-card:nth-child(2){ animation-delay: .05s; }
+.poems-list .poem-card:nth-child(3){ animation-delay: .1s; }
+.poems-list .poem-card:nth-child(4){ animation-delay: .15s; }
+.poems-list .poem-card:nth-child(5){ animation-delay: .2s; }
 /* ---------- notification bell ---------- */
 .notif-wrap{ position: relative; }
 .notif-bell-btn{
