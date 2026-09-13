@@ -419,6 +419,11 @@ notifBell.addEventListener("click", (e) => {
   }
 });
 
+$("notif-close").addEventListener("click", (e) => {
+  e.stopPropagation();
+  notifPanel.classList.add("is-hidden");
+});
+
 // close the panel when tapping anywhere else on the page
 document.addEventListener("click", (e) => {
   if (!notifWrap.contains(e.target)) {
