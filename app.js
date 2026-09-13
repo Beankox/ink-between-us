@@ -253,8 +253,8 @@ function renderPoemCard(p) {
     </div>
     ${isOwner ? `
       <div class="poem-card-actions">
-        <button class="btn btn-ghost poem-edit-btn" type="button">Edit</button>
-        <button class="btn btn-ghost poem-delete-btn" type="button">Delete</button>
+        <button class="btn btn-secondary poem-edit-btn" type="button">Edit</button>
+        <button class="btn btn-danger poem-delete-btn" type="button">Delete</button>
       </div>
     ` : ""}
   `;
