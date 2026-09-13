@@ -317,324 +317,158 @@ input, select, textarea{
 }
 .comment-form button{ align-self:flex-start; }
 
-/* ---------- slider switch animation ---------- */
-@keyframes slideInFromRight{
-  0%{ opacity: 0; transform: translateX(28px); }
-  100%{ opacity: 1; transform: translateX(0); }
+/* ---------- notifications ---------- */
+.notif-wrap{ position: relative; }
+.notif-bell-btn{
+  position: relative;
+  background: none; border: none;
+  font-size: 1.15rem; line-height: 1;
+  padding: 0.4rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
 }
-@keyframes slideInFromLeft{
-  0%{ opacity: 0; transform: translateX(-28px); }
-  100%{ opacity: 1; transform: translateX(0); }
+.notif-bell-btn:hover{ background: #EFE9D8; }
+.notif-badge{
+  position: absolute; top: -2px; right: -2px;
+  background: #D9765A; color: var(--paper-raised);
+  border-radius: 999px;
+  font-family: var(--display); font-weight: 700;
+  font-size: 0.65rem; line-height: 1;
+  padding: 3px 5px;
+  min-width: 16px; text-align: center;
 }
-.slide-in-right{ animation: slideInFromRight .32s cubic-bezier(.22,.9,.36,1); }
-.slide-in-left{ animation: slideInFromLeft .32s cubic-bezier(.22,.9,.36,1); }
-
-/* each poem card pops in with the same bouncy feel as your buttons */
-@keyframes cardPopIn{
-  0%{ opacity: 0; transform: scale(0.92) translateY(6px); }
-  100%{ opacity: 1; transform: scale(1) translateY(0); }
-}
-.poem-card{
-  animation: cardPopIn .32s cubic-bezier(.34,1.56,.64,1) backwards;
-}
-.poems-list .poem-card:nth-child(1){ animation-delay: 0s; }
-.poems-list .poem-card:nth-child(2){ animation-delay: .05s; }
-.poems-list .poem-card:nth-child(3){ animation-delay: .1s; }
-.poems-list .poem-card:nth-child(4){ animation-delay: .15s; }
-.poems-list .poem-card:nth-child(5){ animation-delay: .2s; }
-
-/* ---------- notification panel pop-in ---------- */
-@keyframes panelPopIn{
-  0%{ opacity: 0; transform: scale(0.9) translateY(-8px); }
-  100%{ opacity: 1; transform: scale(1) translateY(0); }
-}
-.notif-panel.panel-pop-in{
-  animation: panelPopIn .22s cubic-bezier(.34,1.56,.64,1);
-}
-
-/* ---------- toasts (replaces browser alert) ---------- */
-.toast-container{
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: min(92vw, 380px);
-  pointer-events: none;
-}
-.toast{
+.notif-panel{
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: 280px; max-height: 340px; overflow-y: auto;
   background: var(--paper-raised);
   border: 2px solid var(--rule);
+  border-radius: 16px;
+  padding: 0.9rem;
+  box-shadow: 0 10px 24px rgba(74,65,49,0.15);
+  z-index: 30;
+}
+.notif-panel-title{
+  font-family: var(--display); font-weight: 700; font-size: 0.95rem;
+  margin: 0 0 0.6rem; color: var(--ink);
+}
+.notif-list{ display:flex; flex-direction:column; gap: 0.5rem; }
+.notif-item{
+  font-size: 0.85rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.notif-item.is-unread{ background: #E7EEE2; }
+.notif-time{ display:block; font-size: 0.72rem; color: var(--ink-soft); margin-top: 2px; }
+.notif-empty{ font-size: 0.85rem; color: var(--ink-soft); margin: 0; }
+
+/* ---------- days together ---------- */
+.days-together{
+  font-size: 0.75rem; color: var(--ink-soft);
+  margin: 0.15rem 0 0; font-weight: 600;
+}
+
+/* ---------- dusk (dark) mode ---------- */
+.dark-toggle-btn{
+  background: none; border: none;
+  font-size: 1.1rem; line-height: 1;
+  padding: 0.4rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.dark-toggle-btn:hover{ background: #EFE9D8; }
+
+body.dark-mode{
+  --paper: #2A2620;
+  --paper-raised: #34302A;
+  --ink: #F1EADD;
+  --ink-soft: #B8AD9B;
+  --moss: #7FA37C;
+  --moss-deep: #9BC198;
+  --honey: #E8BD6E;
+  --blush: #E8A98F;
+  --rule: #454038;
+}
+body.dark-mode .dark-toggle-btn:hover{ background: #40392f; }
+body.dark-mode .btn-primary{ color: #1C1913; }
+body.dark-mode .poem-card::before{ background: #3A4438; }
+body.dark-mode .heart-btn:hover,
+body.dark-mode .heart-btn.is-liked{ background: #453026; }
+body.dark-mode .comments-toggle-btn:hover{ background: #3A4438; }
+
+/* ---------- memory banner ---------- */
+.memory-banner{
+  display:flex; align-items:center; justify-content:space-between; gap: 0.75rem;
+  background: #F3E3D8;
+  border: 2px solid var(--blush);
   border-radius: 14px;
   padding: 0.75rem 1rem;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--ink);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.14);
-  opacity: 0;
-  transform: translateY(-12px) scale(0.95);
-  transition: opacity .2s ease, transform .2s cubic-bezier(.34,1.56,.64,1);
+  margin-bottom: 1.25rem;
 }
-.toast-show{ opacity: 1; transform: translateY(0) scale(1); }
-.toast-hide{ opacity: 0; transform: translateY(-8px) scale(0.97); }
-.toast-error{ border-color: #D9765A; color: #8a3a24; background: #FBEAE3; }
-.toast-success{ border-color: var(--moss); color: var(--moss-deep); background: #EEF4EC; }
+body.dark-mode .memory-banner{ background: #40332B; }
+.memory-banner-text{
+  font-family: var(--serif); font-style: italic;
+  font-size: 0.92rem; margin: 0; color: var(--ink);
+}
+.memory-banner-close{
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); font-size: 0.9rem;
+  padding: 0.2rem 0.4rem; flex-shrink: 0;
+}
+
+/* ---------- search ---------- */
+.poem-search{
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 2px solid var(--rule);
+  background: var(--paper-raised);
+  border-radius: 999px;
+  margin-bottom: 1.25rem;
+}
+
+/* ---------- toasts ---------- */
+.toast-container{
+  position: fixed; bottom: 1.25rem; left: 50%;
+  transform: translateX(-50%);
+  display:flex; flex-direction:column; gap: 0.5rem;
+  z-index: 100; width: calc(100% - 2.5rem); max-width: 380px;
+}
+.toast{
+  font-family: var(--display); font-weight: 600; font-size: 0.88rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 14px;
+  color: var(--paper-raised);
+  background: var(--moss);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast-show{ opacity: 1; transform: translateY(0); }
+.toast-hide{ opacity: 0; }
+.toast-error{ background: #C0664F; }
+.toast-info{ background: var(--ink-soft); }
 
 /* ---------- custom confirm dialog ---------- */
 .confirm-overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(74,65,49,0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
-  z-index: 250;
+  position: fixed; inset: 0;
+  background: rgba(42,38,32,0.45);
+  display:flex; align-items:center; justify-content:center;
+  padding: 1.5rem;
+  z-index: 200;
+  opacity: 0; transition: opacity .18s ease;
 }
+.confirm-overlay.confirm-show{ opacity: 1; }
 .confirm-card{
   background: var(--paper-raised);
   border: 2px solid var(--rule);
   border-radius: 18px;
   padding: 1.5rem;
-  width: 100%;
-  max-width: 320px;
-  box-shadow: 0 6px 0 var(--rule);
-  opacity: 0;
-  transform: scale(0.9) translateY(8px);
-  transition: opacity .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1);
+  max-width: 340px; width: 100%;
+  transform: scale(0.96); transition: transform .18s ease;
 }
-.confirm-show .confirm-card{
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
+.confirm-overlay.confirm-show .confirm-card{ transform: scale(1); }
 .confirm-message{
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--ink);
-  margin: 0 0 1.2rem;
-  text-align: center;
+  font-family: var(--display); font-weight: 600; font-size: 1rem;
+  margin: 0 0 1.25rem; color: var(--ink);
 }
-.confirm-actions{
-  display: flex;
-  gap: 0.6rem;
-  justify-content: center;
-}
-.confirm-actions .btn{ flex: 1; }
-/* ---------- notification bell ---------- */
-.notif-wrap{ position: relative; }
-.notif-bell-btn{
-  position: relative;
-  background: none; border: none;
-  font-size: 1.3rem;
-  padding: 0.3rem 0.4rem;
-  cursor: pointer;
-}
-.notif-badge{
-  position: absolute;
-  top: -2px; right: -2px;
-  background: #D9765A;
-  color: #fff;
-  font-family: var(--sans);
-  font-size: 0.65rem;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 1px 5px;
-  min-width: 16px;
-  text-align: center;
-  line-height: 1.3;
-}
-.notif-panel{
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 280px;
-  max-height: 340px;
-  overflow-y: auto;
-  background: var(--paper-raised);
-  border: 2px solid var(--rule);
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  padding: 0.9rem;
-  z-index: 50;
-}
-.notif-panel-head{
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom: 0.6rem;
-}
-.notif-close-btn{
-  background:none; border:none;
-  font-size: 1rem; color: var(--ink-soft);
-  padding: 0.25rem 0.4rem;
-  line-height: 1;
-}
-.notif-panel-title{
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin: 0;
-  color: var(--ink);
-}
-.notif-list{ display:flex; flex-direction:column; gap:0.5rem; }
-.notif-row{
-  padding: 0.5rem 0.6rem;
-  border-radius: 10px;
-  background: var(--paper);
-}
-.notif-row.notif-unread{ background: #E7EEE2; }
-.notif-text{ margin:0; font-size:0.85rem; }
-.notif-text strong{ font-family: var(--display); color: var(--moss-deep); }
-.notif-time{ margin: 0.15rem 0 0; font-size:0.72rem; color: var(--ink-soft); }
-.notif-empty{
-  font-size: 0.85rem;
-  color: var(--ink-soft);
-  margin: 0;
-}
-
-/* ---------- mobile: bigger tap target + full-width dropdown ---------- */
-@media (max-width: 480px){
-  .notif-bell-btn{
-    font-size: 1.5rem;
-    padding: 0.5rem;
-    min-width: 44px;
-    min-height: 44px;
-  }
-  .notif-badge{
-    top: 2px; right: 2px;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-  }
-  .notif-panel{
-    position: fixed;
-    top: 64px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-height: 70vh;
-  }
-  .notif-close-btn{
-    font-size: 1.3rem;
-    padding: 0.4rem 0.5rem;
-    min-width: 36px;
-    min-height: 36px;
-  }
-  .notif-row{ padding: 0.7rem 0.75rem; }
-  .notif-text{ font-size: 0.9rem; }
-}
-
-/* ---------- notification bell: mobile fit ---------- */
-.notif-bell-btn{
-  padding: 0.5rem 0.6rem; /* bigger tap target */
-}
-@media (max-width: 480px){
-  .notif-panel{
-    width: calc(100vw - 2.5rem);
-    right: -0.75rem;
-    max-height: 60vh;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* ---------- days together counter ---------- */
-.days-together{
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 0.72rem;
-  color: var(--moss-deep);
-  margin: 0.1rem 0 0;
-}
-
-/* ---------- dark mode toggle button ---------- */
-.dark-toggle-btn{
-  font-size: 1.15rem;
-  padding: 0.4rem 0.5rem;
-}
-
-/* ---------- "on this day" memory banner ---------- */
-.memory-banner{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  background: #FBEFD9;
-  border: 2px solid var(--honey);
-  border-radius: 14px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  animation: cardPopIn .3s cubic-bezier(.34,1.56,.64,1);
-}
-.memory-banner-text{
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: #7A5A22;
-  margin: 0;
-}
-.memory-banner-close{
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: #7A5A22;
-  padding: 0.2rem 0.4rem;
-  flex-shrink: 0;
-}
-
-/* ---------- search bar ---------- */
-.poem-search{
-  width: 100%;
-  padding: 0.7rem 1rem;
-  border: 2px solid var(--rule);
-  border-radius: 999px;
-  background: var(--paper-raised);
-  margin-bottom: 1.25rem;
-  font-family: var(--sans);
-  font-size: 0.92rem;
-}
-
-/* ---------- export button ---------- */
-.export-btn{ font-size: 0.85rem; }
-
-/* ================= DARK MODE ================= */
-body.dark-mode{
-  --paper: #23201A;
-  --paper-raised: #2E2A21;
-  --ink: #F1EADA;
-  --ink-soft: #B8AD97;
-  --moss: #85A87E;
-  --moss-deep: #A9CBA0;
-  --honey: #E0A94C;
-  --blush: #E8A98F;
-  --rule: #45402F;
-  --focus: #A9CBA0;
-}
-body.dark-mode .poem-card::before{
-  background: #33422F;
-  color: #A9CBA0;
-}
-body.dark-mode .heart-btn:hover,
-body.dark-mode .heart-btn.is-liked{
-  background: #3A2A22;
-}
-body.dark-mode .comments-toggle-btn:hover{
-  background: #33422F;
-}
-body.dark-mode .memory-banner{
-  background: #3A2F1A;
-  border-color: var(--honey);
-}
-body.dark-mode .memory-banner-text,
-body.dark-mode .memory-banner-close{
-  color: #E0C98A;
-}
-body.dark-mode .toast-error{
-  background: #4A2A20;
-  color: #F0B9A4;
-}
-body.dark-mode .toast-success{
-  background: #253A22;
-  color: #B7D8AE;
-}
+.confirm-actions{ display:flex; gap: 0.6rem; justify-content:flex-end; }
