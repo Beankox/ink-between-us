@@ -106,6 +106,7 @@ auth.onAuthStateChanged(async (user) => {
   const otherAuthor = currentProfile.name === "Bea" ? "Abegail" : "Bea";
   setSelectedAuthor(otherAuthor);
   loadDrafts();
+  loadNotifications();
 });
 
 // ---------- slider ----------
@@ -172,12 +173,14 @@ function renderPoemCard(p) {
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
-    <button class="heart-btn" type="button" aria-label="Like this poem">
-      <span class="heart-icon">♡</span>
-      <span class="heart-count"></span>
-    </button>
-    <div class="poem-comments">
+    <div class="poem-actions-row">
+      <button class="heart-btn" type="button" aria-label="Like this poem">
+        <span class="heart-icon">♡</span>
+        <span class="heart-count"></span>
+      </button>
       <button class="btn btn-ghost comments-toggle-btn" type="button">💬 Comments</button>
+    </div>
+    <div class="poem-comments">
       <div class="comments-section is-hidden">
         <div class="comments-list"></div>
         <form class="comment-form">
@@ -285,6 +288,7 @@ function toggleLike(poem, likedByArr, btnEl) {
         poem.title,
         `liked your poem.`
       );
+      createNotification(poem.authorUid, "liked your poem.", poem.title);
     }
   }).catch(err => {
     // revert on failure
@@ -294,6 +298,133 @@ function toggleLike(poem, likedByArr, btnEl) {
     alert("Couldn't update like: " + err.message);
   });
 }
+
+// ---------- notifications (in-app bell) ----------
+const notifBell = $("notif-bell");
+const notifPanel = $("notif-panel");
+const notifBadge = $("notif-badge");
+const notifList = $("notif-list");
+const notifEmpty = $("notif-empty");
+const notifWrap = $("notif-wrap");
+
+let partnerUidCache = null;
+
+async function getPartnerUid() {
+  if (partnerUidCache) return partnerUidCache;
+  if (!currentProfile || !currentProfile.partnerEmail) return null;
+  const snap = await db.collection("users")
+    .where("email", "==", currentProfile.partnerEmail)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  partnerUidCache = snap.docs[0].id;
+  return partnerUidCache;
+}
+
+async function createNotification(toUid, message, poemTitle) {
+  if (!toUid) return;
+  try {
+    await db.collection("notifications").add({
+      toUid,
+      fromUid: currentUser.uid,
+      fromName: currentProfile.name,
+      message,
+      poemTitle: poemTitle || "",
+      read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Couldn't create notification:", err);
+  }
+}
+
+function timeAgo(date) {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const mins = Math.floor(seconds / 60);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+  if (seconds < 60) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection("notifications")
+      .where("toUid", "==", currentUser.uid)
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+
+    notifList.innerHTML = "";
+    if (snap.empty) {
+      notifEmpty.classList.remove("is-hidden");
+      updateNotifBadge(0);
+      return;
+    }
+    notifEmpty.classList.add("is-hidden");
+
+    let unreadCount = 0;
+    snap.forEach(docSnap => {
+      const n = docSnap.data();
+      if (!n.read) unreadCount++;
+      const row = document.createElement("div");
+      row.className = "notif-row" + (n.read ? "" : " notif-unread");
+      const date = n.createdAt?.toDate ? n.createdAt.toDate() : null;
+      row.innerHTML = `
+        <p class="notif-text"><strong></strong> <span class="notif-msg"></span></p>
+        <p class="notif-time"></p>
+      `;
+      row.querySelector("strong").textContent = n.fromName;
+      row.querySelector(".notif-msg").textContent = n.message;
+      row.querySelector(".notif-time").textContent = date ? timeAgo(date) : "";
+      notifList.appendChild(row);
+    });
+    updateNotifBadge(unreadCount);
+  } catch (err) {
+    console.warn("Couldn't load notifications:", err);
+  }
+}
+
+function updateNotifBadge(count) {
+  if (count > 0) {
+    notifBadge.textContent = count > 9 ? "9+" : count;
+    notifBadge.classList.remove("is-hidden");
+  } else {
+    notifBadge.classList.add("is-hidden");
+  }
+}
+
+async function markAllNotificationsRead() {
+  const snap = await db.collection("notifications")
+    .where("toUid", "==", currentUser.uid)
+    .where("read", "==", false)
+    .get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  snap.forEach(docSnap => batch.update(docSnap.ref, { read: true }));
+  await batch.commit();
+  document.querySelectorAll(".notif-row.notif-unread").forEach(r => r.classList.remove("notif-unread"));
+  updateNotifBadge(0);
+}
+
+notifBell.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const isHidden = notifPanel.classList.contains("is-hidden");
+  notifPanel.classList.toggle("is-hidden");
+  if (isHidden) {
+    markAllNotificationsRead();
+  }
+});
+
+// close the panel when tapping anywhere else on the page
+document.addEventListener("click", (e) => {
+  if (!notifWrap.contains(e.target)) {
+    notifPanel.classList.add("is-hidden");
+  }
+});
 
 // ---------- comments ----------
 async function loadComments(poemId, listEl) {
@@ -362,6 +493,7 @@ async function addComment(poem, text, listEl, formEl) {
         poem.title,
         `commented on your poem.`
       );
+      createNotification(poem.authorUid, "commented on your poem.", poem.title);
     }
   } catch (err) {
     alert("Couldn't post comment: " + err.message);
@@ -438,6 +570,8 @@ async function savePoem(status) {
           title,
           `just published a new poem for you.`
         );
+        const partnerUid = await getPartnerUid();
+        createNotification(partnerUid, "published a new poem for you.", title);
       }
       editingPoemOriginalStatus = "published";
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
