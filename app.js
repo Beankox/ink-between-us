@@ -15,6 +15,55 @@ let selectedAuthor = "Bea";
 let editingPoemId = null; // null = new poem
 let editingPoemOriginalStatus = null; // tracks whether we're editing an already-published poem
 
+// ---------- toast + custom confirm (replaces browser alert/confirm) ----------
+const toastContainer = $("toast-container");
+
+function showToast(message, type = "info") {
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add("toast-show"));
+
+  setTimeout(() => {
+    toast.classList.remove("toast-show");
+    toast.classList.add("toast-hide");
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+}
+
+function showConfirm(message, confirmLabel = "Delete") {
+  return new Promise((resolve) => {
+    const modal = $("confirm-modal");
+    $("confirm-message").textContent = message;
+    $("confirm-ok").textContent = confirmLabel;
+
+    modal.classList.remove("is-hidden");
+    modal.classList.remove("confirm-show");
+    void modal.offsetWidth;
+    modal.classList.add("confirm-show");
+
+    function cleanup(result) {
+      modal.classList.remove("confirm-show");
+      setTimeout(() => modal.classList.add("is-hidden"), 180);
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      modal.removeEventListener("click", onOverlay);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    function onOverlay(e){ if (e.target === modal) cleanup(false); }
+
+    const okBtn = $("confirm-ok");
+    const cancelBtn = $("confirm-cancel");
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+    modal.addEventListener("click", onOverlay);
+  });
+}
+
 // ---------- element refs ----------
 const $ = (id) => document.getElementById(id);
 
@@ -51,7 +100,6 @@ authTabs.forEach(tab => {
 // ---------- signup ----------
 signupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  $("signup-error").textContent = "";
   const name = $("signup-name").value;
   const email = $("signup-email").value.trim();
   const password = $("signup-password").value;
@@ -66,20 +114,19 @@ signupForm.addEventListener("submit", async (e) => {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
   } catch (err) {
-    $("signup-error").textContent = err.message;
+    showToast(err.message, "error");
   }
 });
 
 // ---------- login ----------
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  $("login-error").textContent = "";
   const email = $("login-email").value.trim();
   const password = $("login-password").value;
   try {
     await auth.signInWithEmailAndPassword(email, password);
   } catch (err) {
-    $("login-error").textContent = err.message;
+    showToast(err.message, "error");
   }
 });
 
@@ -252,13 +299,15 @@ function renderPoemCard(p) {
 
 // ---------- direct delete from a poem card (no need to open the editor first) ----------
 async function deletePoemDirect(poemId) {
-  if (!confirm("Delete this poem for good?")) return;
+  const confirmed = await showConfirm("Delete this poem for good?");
+  if (!confirmed) return;
   try {
     await db.collection("poems").doc(poemId).delete();
+    showToast("Poem deleted.", "success");
     loadDrafts();
     loadPublishedPoems();
   } catch (err) {
-    alert("Couldn't delete: " + err.message);
+    showToast("Couldn't delete: " + err.message, "error");
   }
 }
 
@@ -310,7 +359,7 @@ function toggleLike(poem, likedByArr, btnEl) {
     if (isLiked) likedByArr.push(uid);
     else likedByArr.splice(likedByArr.indexOf(uid), 1);
     updateHeartUI(btnEl, likedByArr, uid, false);
-    alert("Couldn't update like: " + err.message);
+    showToast("Couldn't update like: " + err.message, "error");
   });
 }
 
@@ -428,9 +477,14 @@ async function markAllNotificationsRead() {
 notifBell.addEventListener("click", (e) => {
   e.stopPropagation();
   const isHidden = notifPanel.classList.contains("is-hidden");
-  notifPanel.classList.toggle("is-hidden");
   if (isHidden) {
+    notifPanel.classList.remove("is-hidden");
+    notifPanel.classList.remove("panel-pop-in");
+    void notifPanel.offsetWidth;
+    notifPanel.classList.add("panel-pop-in");
     markAllNotificationsRead();
+  } else {
+    notifPanel.classList.add("is-hidden");
   }
 });
 
@@ -485,7 +539,8 @@ function renderCommentRow(c, poemId) {
 
   if (isMine) {
     row.querySelector(".comment-delete-btn").addEventListener("click", async () => {
-      if (!confirm("Delete this comment?")) return;
+      const confirmed = await showConfirm("Delete this comment?");
+      if (!confirmed) return;
       await db.collection("poems").doc(poemId).collection("comments").doc(c.id).delete();
       row.remove();
     });
@@ -516,7 +571,7 @@ async function addComment(poem, text, listEl, formEl) {
       createNotification(poem.authorUid, "commented on your poem.", poem.title);
     }
   } catch (err) {
-    alert("Couldn't post comment: " + err.message);
+    showToast("Couldn't post comment: " + err.message, "error");
   }
 }
 
@@ -581,7 +636,8 @@ async function savePoem(status) {
     }
 
     if (status === "published") {
-      editorStatus.textContent = "Published.";
+      editorStatus.textContent = "";
+      showToast("Published! ✦", "success");
       const isFreshPublish = editingPoemOriginalStatus !== "published";
       if (isFreshPublish) {
         await sendNotificationEmail(
@@ -596,18 +652,21 @@ async function savePoem(status) {
       editingPoemOriginalStatus = "published";
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
     } else {
-      editorStatus.textContent = "Draft saved.";
+      editorStatus.textContent = "";
+      showToast("Draft saved.", "success");
     }
     loadDrafts();
   } catch (err) {
-    editorStatus.textContent = "Couldn't save: " + err.message;
+    showToast("Couldn't save: " + err.message, "error");
   }
 }
 
 $("delete-poem-btn").addEventListener("click", async () => {
   if (!editingPoemId) return;
-  if (!confirm("Delete this poem for good?")) return;
+  const confirmed = await showConfirm("Delete this poem for good?");
+  if (!confirmed) return;
   await db.collection("poems").doc(editingPoemId).delete();
+  showToast("Poem deleted.", "success");
   closeEditor();
   loadDrafts();
   loadPublishedPoems();
