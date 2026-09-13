@@ -283,7 +283,7 @@ function toggleLike(poem, likedByArr, btnEl) {
         poem.authorEmail,
         currentProfile.name,
         poem.title,
-        `${currentProfile.name} liked your poem.`
+        `liked your poem.`
       );
     }
   }).catch(err => {
@@ -360,7 +360,7 @@ async function addComment(poem, text, listEl, formEl) {
         poem.authorEmail,
         currentProfile.name,
         poem.title,
-        `${currentProfile.name} commented on your poem.`
+        `commented on your poem.`
       );
     }
   } catch (err) {
@@ -436,7 +436,7 @@ async function savePoem(status) {
           currentProfile.partnerEmail,
           currentProfile.name,
           title,
-          `${currentProfile.name} just published a new poem for you.`
+          `just published a new poem for you.`
         );
       }
       editingPoemOriginalStatus = "published";
