@@ -67,8 +67,12 @@
   <!-- ============ APP SCREEN ============ -->
   <div id="app-screen" class="app-wrap is-hidden">
     <header class="app-header">
-      <p class="app-mark">Ink Between Us</p>
+      <div>
+        <p class="app-mark">Ink Between Us</p>
+        <p id="days-together" class="days-together is-hidden"></p>
+      </div>
       <div class="app-header-right">
+        <button type="button" id="dark-toggle" class="btn btn-ghost dark-toggle-btn" aria-label="Toggle dark mode">🌙</button>
         <div class="notif-wrap" id="notif-wrap">
           <button type="button" id="notif-bell" class="notif-bell-btn">
             🔔<span id="notif-badge" class="notif-badge is-hidden">0</span>
@@ -94,10 +98,20 @@
       <span class="reader-toggle-thumb" id="reader-thumb"></span>
     </nav>
 
+    <!-- "On this day" memory -->
+    <div id="memory-banner" class="memory-banner is-hidden">
+      <p id="memory-banner-text" class="memory-banner-text"></p>
+      <button type="button" id="memory-banner-close" class="memory-banner-close" aria-label="Dismiss">✕</button>
+    </div>
+
+    <!-- Search -->
+    <input type="text" id="poem-search" class="poem-search" placeholder="🔍 Search poems…" />
+
     <!-- Published poems for the selected author -->
     <section id="reader-view" class="reader-view">
       <div id="poems-list" class="poems-list"></div>
       <p id="poems-empty" class="empty-note is-hidden">Nothing published here yet — the page is still blank, waiting.</p>
+      <p id="poems-no-results" class="empty-note is-hidden">No poems match your search.</p>
     </section>
 
     <hr class="divider" />
