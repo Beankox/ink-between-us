@@ -116,12 +116,34 @@ readerToggle.addEventListener("click", (e) => {
 });
 
 function setSelectedAuthor(author) {
+  const changed = author !== selectedAuthor || !readerView.dataset.loaded;
+  const direction = author === "Abegail" ? 1 : -1; // Abegail's tab sits to the right
   selectedAuthor = author;
   document.querySelectorAll(".reader-toggle-btn").forEach(b => {
     b.classList.toggle("is-active", b.dataset.author === author);
   });
   readerThumb.style.transform = author === "Bea" ? "translateX(0)" : "translateX(100%)";
-  loadPublishedPoems();
+
+  if (!changed) {
+    loadPublishedPoems();
+    return;
+  }
+
+  readerView.dataset.loaded = "1";
+  readerView.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+  readerView.style.transform = `translateX(${-direction * 24}px)`;
+  readerView.style.opacity = "0";
+
+  setTimeout(async () => {
+    await loadPublishedPoems();
+    // snap to the opposite side with no transition, then animate back to center
+    readerView.style.transition = "none";
+    readerView.style.transform = `translateX(${direction * 24}px)`;
+    void readerView.offsetWidth; // force reflow so the jump isn't animated
+    readerView.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+    readerView.style.transform = "translateX(0)";
+    readerView.style.opacity = "1";
+  }, 220);
 }
 
 // ---------- load published poems for the slider ----------
@@ -163,11 +185,11 @@ function renderPoemCard(p) {
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
     <button type="button" class="heart-btn ${isLiked ? "is-liked" : ""}">
-      <span class="heart-icon">${isLiked ? "💚" : "🤍"}</span>
+      <span class="heart-icon">${isLiked ? "♥" : "♡"}</span>
       <span class="heart-count">${likeCount}</span>
     </button>
     <div class="poem-comments">
-      <button type="button" class="comments-toggle-btn">💬 Comments</button>
+      <button type="button" class="comments-toggle-btn">🖋️ Notes</button>
       <div class="comments-section is-hidden">
         <div class="comments-list"></div>
         <form class="comment-form">
@@ -254,7 +276,7 @@ async function toggleLike(p, heartBtn) {
     p.likeCount = p.likedBy.length;
     heartBtn.classList.toggle("is-liked");
     const icon = heartBtn.querySelector(".heart-icon");
-    icon.textContent = heartBtn.classList.contains("is-liked") ? "💚" : "🤍";
+    icon.textContent = heartBtn.classList.contains("is-liked") ? "♥" : "♡";
     heartBtn.querySelector(".heart-count").textContent = p.likeCount;
     icon.classList.remove("heart-pop");
     void icon.offsetWidth;
@@ -365,54 +387,4 @@ async function savePoem(status) {
   }
 }
 
-$("delete-poem-btn").addEventListener("click", async () => {
-  if (!editingPoemId) return;
-  if (!confirm("Delete this poem for good?")) return;
-  await db.collection("poems").doc(editingPoemId).delete();
-  closeEditor();
-  loadDrafts();
-  loadPublishedPoems();
-});
-
-// ---------- drafts list ----------
-async function loadDrafts() {
-  draftsList.innerHTML = "";
-  draftsEmpty.classList.add("is-hidden");
-  const snap = await db.collection("poems")
-    .where("authorUid", "==", currentUser.uid)
-    .where("status", "==", "draft")
-    .orderBy("updatedAt", "desc")
-    .get();
-
-  if (snap.empty) {
-    draftsEmpty.classList.remove("is-hidden");
-    return;
-  }
-  snap.forEach(docSnap => {
-    const p = { id: docSnap.id, ...docSnap.data() };
-    const row = document.createElement("div");
-    row.className = "draft-row";
-    row.innerHTML = `
-      <span class="draft-row-title ${p.title ? "" : "untitled"}"></span>
-      <button class="btn btn-ghost">Open</button>
-    `;
-    row.querySelector(".draft-row-title").textContent = p.title || "Untitled draft";
-    row.querySelector("button").addEventListener("click", () => openEditor(p));
-    draftsList.appendChild(row);
-  });
-}
-
-// ---------- notification email ----------
-async function notifyPartner(title) {
-  if (typeof emailjs === "undefined" || emailjsConfig.publicKey === "PASTE_ME") return;
-  if (!currentProfile.partnerEmail) return;
-  try {
-    await emailjs.send(emailjsConfig.serviceId, emailjsConfig.templateId, {
-      to_email: currentProfile.partnerEmail,
-      from_name: currentProfile.name,
-      poem_title: title || "Untitled",
-    });
-  } catch (err) {
-    console.warn("Notification email failed:", err);
-  }
-}
+$("delete-poem-btn")
