@@ -26,6 +26,7 @@ const authTabs = document.querySelectorAll(".auth-tab");
 
 const readerToggle = $("reader-toggle");
 const readerThumb = $("reader-thumb");
+const readerView = $("reader-view");
 const poemsList = $("poems-list");
 const poemsEmpty = $("poems-empty");
 
