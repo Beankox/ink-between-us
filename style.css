@@ -538,3 +538,103 @@ input, select, textarea{
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ---------- days together counter ---------- */
+.days-together{
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--moss-deep);
+  margin: 0.1rem 0 0;
+}
+
+/* ---------- dark mode toggle button ---------- */
+.dark-toggle-btn{
+  font-size: 1.15rem;
+  padding: 0.4rem 0.5rem;
+}
+
+/* ---------- "on this day" memory banner ---------- */
+.memory-banner{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #FBEFD9;
+  border: 2px solid var(--honey);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  animation: cardPopIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+.memory-banner-text{
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #7A5A22;
+  margin: 0;
+}
+.memory-banner-close{
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #7A5A22;
+  padding: 0.2rem 0.4rem;
+  flex-shrink: 0;
+}
+
+/* ---------- search bar ---------- */
+.poem-search{
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 2px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper-raised);
+  margin-bottom: 1.25rem;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+}
+
+/* ---------- export button ---------- */
+.export-btn{ font-size: 0.85rem; }
+
+/* ================= DARK MODE ================= */
+body.dark-mode{
+  --paper: #23201A;
+  --paper-raised: #2E2A21;
+  --ink: #F1EADA;
+  --ink-soft: #B8AD97;
+  --moss: #85A87E;
+  --moss-deep: #A9CBA0;
+  --honey: #E0A94C;
+  --blush: #E8A98F;
+  --rule: #45402F;
+  --focus: #A9CBA0;
+}
+body.dark-mode .poem-card::before{
+  background: #33422F;
+  color: #A9CBA0;
+}
+body.dark-mode .heart-btn:hover,
+body.dark-mode .heart-btn.is-liked{
+  background: #3A2A22;
+}
+body.dark-mode .comments-toggle-btn:hover{
+  background: #33422F;
+}
+body.dark-mode .memory-banner{
+  background: #3A2F1A;
+  border-color: var(--honey);
+}
+body.dark-mode .memory-banner-text,
+body.dark-mode .memory-banner-close{
+  color: #E0C98A;
+}
+body.dark-mode .toast-error{
+  background: #4A2A20;
+  color: #F0B9A4;
+}
+body.dark-mode .toast-success{
+  background: #253A22;
+  color: #B7D8AE;
+}
