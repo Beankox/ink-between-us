@@ -74,7 +74,10 @@
             🔔<span id="notif-badge" class="notif-badge is-hidden">0</span>
           </button>
           <div id="notif-panel" class="notif-panel is-hidden">
-            <p class="notif-panel-title">Notifications</p>
+            <div class="notif-panel-head">
+              <p class="notif-panel-title">Notifications</p>
+              <button type="button" id="notif-close" class="notif-close-btn" aria-label="Close">✕</button>
+            </div>
             <div id="notif-list" class="notif-list"></div>
             <p id="notif-empty" class="notif-empty is-hidden">Nothing yet — likes, notes, and new poems will land here.</p>
           </div>
