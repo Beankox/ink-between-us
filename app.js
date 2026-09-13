@@ -176,12 +176,6 @@ function renderPoemCard(p) {
       <span class="heart-icon">♡</span>
       <span class="heart-count"></span>
     </button>
-    ${isOwner ? `
-      <div class="poem-card-actions">
-        <button class="btn btn-ghost poem-edit-btn" type="button">Edit</button>
-        <button class="btn btn-ghost poem-delete-btn" type="button">Delete</button>
-      </div>
-    ` : ""}
     <div class="poem-comments">
       <button class="btn btn-ghost comments-toggle-btn" type="button">💬 Comments</button>
       <div class="comments-section is-hidden">
@@ -192,6 +186,12 @@ function renderPoemCard(p) {
         </form>
       </div>
     </div>
+    ${isOwner ? `
+      <div class="poem-card-actions">
+        <button class="btn btn-ghost poem-edit-btn" type="button">Edit</button>
+        <button class="btn btn-ghost poem-delete-btn" type="button">Delete</button>
+      </div>
+    ` : ""}
   `;
   card.querySelector(".poem-title").textContent = p.title || "Untitled";
   card.querySelector(".poem-meta").textContent = metaText;
