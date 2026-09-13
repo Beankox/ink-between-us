@@ -117,16 +117,21 @@ readerToggle.addEventListener("click", (e) => {
 });
 
 function setSelectedAuthor(author) {
+  const direction =
+    (selectedAuthor === "Bea" && author === "Abegail") ? "right" :
+    (selectedAuthor === "Abegail" && author === "Bea") ? "left" :
+    null;
+
   selectedAuthor = author;
   document.querySelectorAll(".reader-toggle-btn").forEach(b => {
     b.classList.toggle("is-active", b.dataset.author === author);
   });
   readerThumb.style.transform = author === "Bea" ? "translateX(0)" : "translateX(100%)";
-  loadPublishedPoems();
+  loadPublishedPoems(direction);
 }
 
 // ---------- load published poems for the slider ----------
-async function loadPublishedPoems() {
+async function loadPublishedPoems(direction) {
   poemsList.innerHTML = "";
   poemsEmpty.classList.add("is-hidden");
   try {
@@ -138,16 +143,26 @@ async function loadPublishedPoems() {
 
     if (snap.empty) {
       poemsEmpty.classList.remove("is-hidden");
+      animateReaderView(direction);
       return;
     }
     snap.forEach(docSnap => {
       const p = { id: docSnap.id, ...docSnap.data() };
       poemsList.appendChild(renderPoemCard(p));
     });
+    animateReaderView(direction);
   } catch (err) {
     poemsEmpty.textContent = "Couldn't load poems: " + err.message;
     poemsEmpty.classList.remove("is-hidden");
   }
+}
+
+function animateReaderView(direction) {
+  const view = $("reader-view");
+  view.classList.remove("slide-in-left", "slide-in-right");
+  void view.offsetWidth; // restart the animation even on repeated taps
+  if (direction === "right") view.classList.add("slide-in-right");
+  else if (direction === "left") view.classList.add("slide-in-left");
 }
 
 function renderPoemCard(p) {
