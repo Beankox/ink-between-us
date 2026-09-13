@@ -129,6 +129,20 @@
     </section>
   </div>
 
+  <!-- Toast messages (replaces browser alert()) -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Custom confirm dialog (replaces browser confirm()) -->
+  <div id="confirm-modal" class="confirm-overlay is-hidden">
+    <div class="confirm-card">
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" type="button" class="btn btn-ghost">Cancel</button>
+        <button id="confirm-ok" type="button" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase (compat build keeps this script-tag friendly, no build step) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
