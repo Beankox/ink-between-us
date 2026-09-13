@@ -15,6 +15,9 @@ let selectedAuthor = "Bea";
 let editingPoemId = null; // null = new poem
 let editingPoemOriginalStatus = null; // tracks whether we're editing an already-published poem
 
+// ---------- element refs ----------
+const $ = (id) => document.getElementById(id);
+
 // ---------- toast + custom confirm (replaces browser alert/confirm) ----------
 const toastContainer = $("toast-container");
 
@@ -63,9 +66,6 @@ function showConfirm(message, confirmLabel = "Delete") {
     modal.addEventListener("click", onOverlay);
   });
 }
-
-// ---------- element refs ----------
-const $ = (id) => document.getElementById(id);
 
 const authScreen = $("auth-screen");
 const appScreen = $("app-screen");
