@@ -149,8 +149,8 @@ input, select, textarea{
   transition: transform .25s ease;
 }
 
-/* ---------- poems ---------- */
-.reader-view{ min-height: 4rem; }
+/* ---------- poems (quest cards) ---------- */
+.reader-view{ min-height: 4rem; overflow: hidden; }
 .poems-list{ display:flex; flex-direction:column; gap: 1.5rem; }
 .poem-card{
   background: var(--paper-raised);
@@ -270,7 +270,7 @@ input, select, textarea{
 .heart-btn:hover{ color: var(--blush); background: #F7EAE3; }
 .heart-btn.is-liked{ color: #D9765A; background: #F7EAE3; }
 .heart-count{ font-family: var(--sans); font-size: 0.85rem; font-weight: 600; }
-.heart-icon{ display:inline-block; }
+.heart-icon{ display:inline-block; font-size: 1.3rem; line-height: 1; color: currentColor; }
 @keyframes heartPop{
   0%{ transform: scale(1); }
   30%{ transform: scale(1.4) rotate(-6deg); }
