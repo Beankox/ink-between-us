@@ -154,7 +154,109 @@ auth.onAuthStateChanged(async (user) => {
   setSelectedAuthor(otherAuthor);
   loadDrafts();
   loadNotifications();
+  showDaysTogether();
+  checkOnThisDay();
 });
+
+// ---------- days together counter ----------
+function showDaysTogether() {
+  const el = $("days-together");
+  if (typeof siteConfig === "undefined" || !siteConfig.anniversaryDate) {
+    el.classList.add("is-hidden");
+    return;
+  }
+  const start = new Date(siteConfig.anniversaryDate + "T00:00:00");
+  if (isNaN(start.getTime())) {
+    el.classList.add("is-hidden");
+    return;
+  }
+  const days = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 0) {
+    el.classList.add("is-hidden");
+    return;
+  }
+  el.textContent = `${days.toLocaleString()} days together`;
+  el.classList.remove("is-hidden");
+}
+
+// ---------- "on this day" memory ----------
+async function checkOnThisDay() {
+  const banner = $("memory-banner");
+  const bannerText = $("memory-banner-text");
+  const today = new Date();
+
+  try {
+    const snap = await db.collection("poems")
+      .where("status", "==", "published")
+      .get();
+
+    const matches = [];
+    snap.forEach(docSnap => {
+      const p = docSnap.data();
+      const d = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
+      if (!d) return;
+      const sameDay = d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+      const pastYear = d.getFullYear() < today.getFullYear();
+      if (sameDay && pastYear) matches.push({ ...p, id: docSnap.id, date: d });
+    });
+
+    if (matches.length === 0) {
+      banner.classList.add("is-hidden");
+      return;
+    }
+    const pick = matches[0];
+    const yearsAgo = today.getFullYear() - pick.date.getFullYear();
+    bannerText.textContent = `✦ On this day, ${yearsAgo} year${yearsAgo > 1 ? "s" : ""} ago, ${pick.authorName} wrote "${pick.title || "Untitled"}" for you.`;
+    banner.classList.remove("is-hidden");
+  } catch (err) {
+    console.warn("Couldn't check on-this-day memories:", err);
+  }
+}
+
+$("memory-banner-close").addEventListener("click", () => {
+  $("memory-banner").classList.add("is-hidden");
+});
+
+// ---------- dark mode ----------
+const darkToggleBtn = $("dark-toggle");
+function applyDarkMode(isDark) {
+  document.body.classList.toggle("dark-mode", isDark);
+  darkToggleBtn.textContent = isDark ? "☀️" : "🌙";
+}
+applyDarkMode(localStorage.getItem("inkBetweenUsDark") === "true");
+darkToggleBtn.addEventListener("click", () => {
+  const isDark = !document.body.classList.contains("dark-mode");
+  applyDarkMode(isDark);
+  localStorage.setItem("inkBetweenUsDark", isDark ? "true" : "false");
+});
+
+// ---------- search / filter ----------
+let allLoadedPoems = [];
+const poemSearchInput = $("poem-search");
+
+poemSearchInput.addEventListener("input", () => {
+  renderFilteredPoems();
+});
+
+function renderFilteredPoems() {
+  const query = poemSearchInput.value.trim().toLowerCase();
+  const noResults = $("poems-no-results");
+  poemsList.innerHTML = "";
+
+  const filtered = query
+    ? allLoadedPoems.filter(p =>
+        (p.title || "").toLowerCase().includes(query) ||
+        (p.body || "").toLowerCase().includes(query))
+    : allLoadedPoems;
+
+  if (filtered.length === 0 && allLoadedPoems.length > 0) {
+    noResults.classList.remove("is-hidden");
+  } else {
+    noResults.classList.add("is-hidden");
+  }
+
+  filtered.forEach(p => poemsList.appendChild(renderPoemCard(p)));
+}
 
 // ---------- slider ----------
 readerToggle.addEventListener("click", (e) => {
@@ -181,6 +283,8 @@ function setSelectedAuthor(author) {
 async function loadPublishedPoems(direction) {
   poemsList.innerHTML = "";
   poemsEmpty.classList.add("is-hidden");
+  $("poems-no-results").classList.add("is-hidden");
+  poemSearchInput.value = "";
   try {
     const snap = await db.collection("poems")
       .where("authorName", "==", selectedAuthor)
@@ -188,6 +292,7 @@ async function loadPublishedPoems(direction) {
       .orderBy("publishedAt", "desc")
       .get();
 
+    allLoadedPoems = [];
     if (snap.empty) {
       poemsEmpty.classList.remove("is-hidden");
       animateReaderView(direction);
@@ -195,6 +300,7 @@ async function loadPublishedPoems(direction) {
     }
     snap.forEach(docSnap => {
       const p = { id: docSnap.id, ...docSnap.data() };
+      allLoadedPoems.push(p);
       poemsList.appendChild(renderPoemCard(p));
     });
     animateReaderView(direction);
@@ -241,6 +347,7 @@ function renderPoemCard(p) {
         <span class="heart-count"></span>
       </button>
       <button class="btn btn-ghost comments-toggle-btn" type="button">💬 Comments</button>
+      <button class="btn btn-ghost export-btn" type="button">⬇ Export</button>
     </div>
     <div class="poem-comments">
       <div class="comments-section is-hidden">
@@ -294,7 +401,89 @@ function renderPoemCard(p) {
     addComment(p, commentInput.value, commentsList, commentForm);
   });
 
+  // ---- export as image ----
+  card.querySelector(".export-btn").addEventListener("click", () => exportPoemAsImage(p));
+
   return card;
+}
+
+// ---------- export a poem as a downloadable image ----------
+function exportPoemAsImage(p) {
+  const width = 800;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // word-wrap the poem body first so we know how tall the canvas needs to be
+  ctx.font = "28px Georgia, serif";
+  const maxTextWidth = width - 160;
+  const words = (p.body || "").split(/\s+/);
+  const lines = [];
+  let line = "";
+  words.forEach(word => {
+    const test = line ? line + " " + word : word;
+    if (ctx.measureText(test).width > maxTextWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  });
+  if (line) lines.push(line);
+
+  const lineHeight = 42;
+  const topPad = 180;
+  const bottomPad = 120;
+  const height = topPad + lines.length * lineHeight + bottomPad;
+  canvas.width = width;
+  canvas.height = height;
+
+  // background
+  ctx.fillStyle = "#F3EFDE";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#FFFCF3";
+  ctx.strokeStyle = "#E2D9BE";
+  ctx.lineWidth = 3;
+  roundRect(ctx, 20, 20, width - 40, height - 40, 20);
+  ctx.fill();
+  ctx.stroke();
+
+  // title
+  ctx.fillStyle = "#4A4131";
+  ctx.font = "bold 40px Georgia, serif";
+  ctx.fillText(p.title || "Untitled", 80, 100);
+
+  // meta
+  ctx.fillStyle = "#8B806B";
+  ctx.font = "20px sans-serif";
+  const dateStr = p.publishedAt?.toDate ? p.publishedAt.toDate().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
+  ctx.fillText(`${p.authorName} · ${dateStr}`, 80, 140);
+
+  // body
+  ctx.fillStyle = "#4A4131";
+  ctx.font = "28px Georgia, serif";
+  lines.forEach((l, i) => {
+    ctx.fillText(l, 80, topPad + i * lineHeight);
+  });
+
+  // footer mark
+  ctx.fillStyle = "#8B806B";
+  ctx.font = "italic 18px Georgia, serif";
+  ctx.fillText("Ink Between Us", 80, height - 50);
+
+  const link = document.createElement("a");
+  link.download = `${(p.title || "poem").replace(/[^a-z0-9]/gi, "_").toLowerCase()}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 // ---------- direct delete from a poem card (no need to open the editor first) ----------
@@ -594,16 +783,31 @@ function closeEditor() {
   editor.classList.add("is-hidden");
   editingPoemId = null;
   editingPoemOriginalStatus = null;
+  clearTimeout(autoSaveTimer);
 }
+
+// ---------- auto-save drafts while typing ----------
+let autoSaveTimer = null;
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  if (!editorBody.value.trim()) return; // nothing to save yet
+  autoSaveTimer = setTimeout(() => {
+    // never auto-save over a poem that's already published — only drafts
+    if (editingPoemOriginalStatus === "published") return;
+    savePoem("draft", true);
+  }, 1500);
+}
+editorTitle.addEventListener("input", scheduleAutoSave);
+editorBody.addEventListener("input", scheduleAutoSave);
 
 $("save-draft-btn").addEventListener("click", () => savePoem("draft"));
 $("publish-btn").addEventListener("click", () => savePoem("published"));
 
-async function savePoem(status) {
+async function savePoem(status, silent) {
   const title = editorTitle.value.trim();
   const body = editorBody.value.trim();
   if (!body) {
-    editorStatus.textContent = "Write something first.";
+    if (!silent) editorStatus.textContent = "Write something first.";
     return;
   }
 
@@ -651,13 +855,15 @@ async function savePoem(status) {
       }
       editingPoemOriginalStatus = "published";
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
+    } else if (silent) {
+      editorStatus.textContent = "Saved ✓";
     } else {
       editorStatus.textContent = "";
       showToast("Draft saved.", "success");
     }
     loadDrafts();
   } catch (err) {
-    showToast("Couldn't save: " + err.message, "error");
+    if (!silent) showToast("Couldn't save: " + err.message, "error");
   }
 }
 
