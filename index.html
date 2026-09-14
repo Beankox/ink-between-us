@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4" />
+<link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
 
@@ -72,13 +72,16 @@
         <p id="days-together" class="days-together is-hidden"></p>
       </div>
       <div class="app-header-right">
-        <button type="button" id="dark-toggle" class="dark-toggle-btn" aria-label="Toggle dusk mode">🌙</button>
+        <button type="button" id="dark-toggle" class="btn btn-ghost dark-toggle-btn" aria-label="Toggle dark mode">🌙</button>
         <div class="notif-wrap" id="notif-wrap">
           <button type="button" id="notif-bell" class="notif-bell-btn">
             🔔<span id="notif-badge" class="notif-badge is-hidden">0</span>
           </button>
           <div id="notif-panel" class="notif-panel is-hidden">
-            <p class="notif-panel-title">Notifications</p>
+            <div class="notif-panel-head">
+              <p class="notif-panel-title">Notifications</p>
+              <button type="button" id="notif-close" class="notif-close-btn" aria-label="Close">✕</button>
+            </div>
             <div id="notif-list" class="notif-list"></div>
             <p id="notif-empty" class="notif-empty is-hidden">Nothing yet — likes, notes, and new poems will land here.</p>
           </div>
@@ -140,10 +143,10 @@
     </section>
   </div>
 
-  <!-- Toast messages (replaces the browser's alert popup) -->
+  <!-- Toast messages (replaces browser alert()) -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Custom confirm dialog (replaces the browser's confirm popup) -->
+  <!-- Custom confirm dialog (replaces browser confirm()) -->
   <div id="confirm-modal" class="confirm-overlay is-hidden">
     <div class="confirm-card">
       <p id="confirm-message" class="confirm-message"></p>
@@ -161,7 +164,7 @@
   <!-- EmailJS for the notification emails -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
-  <script src="config.js?v=3"></script>
-  <script src="app.js?v=4"></script>
+  <script src="config.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
