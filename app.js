@@ -155,10 +155,12 @@ auth.onAuthStateChanged(async (user) => {
   loadDrafts();
   loadNotifications();
   showDaysTogether();
+  loadCouplePhoto();
   checkOnThisDay();
+  loadQuestTally();
 });
 
-// ---------- days together counter ----------
+// ---------- days together counter (as a level + XP bar) ----------
 function showDaysTogether() {
   const el = $("days-together");
   if (typeof siteConfig === "undefined" || !siteConfig.anniversaryDate) {
@@ -175,9 +177,92 @@ function showDaysTogether() {
     el.classList.add("is-hidden");
     return;
   }
-  el.textContent = `${days.toLocaleString()} days together`;
+
+  const DAYS_PER_LEVEL = 30;
+  const level = Math.floor(days / DAYS_PER_LEVEL) + 1;
+  const progressDays = days % DAYS_PER_LEVEL;
+  const progressPct = Math.round((progressDays / DAYS_PER_LEVEL) * 100);
+
+  el.innerHTML = `
+    <span class="level-badge">Lv. ${level}</span>${days.toLocaleString()} days together
+    <span class="xp-bar-track"><span class="xp-bar-fill" style="width:${progressPct}%"></span></span>
+  `;
   el.classList.remove("is-hidden");
+
+  checkMilestone(`days-${Math.floor(days / 100) * 100}`, days >= 100 && days % 100 < 1,
+    `🏆 Milestone unlocked: ${Math.floor(days / 100) * 100} days together!`);
 }
+
+function checkMilestone(key, condition, message) {
+  if (!condition) return;
+  const seenKey = `milestone-seen-${key}`;
+  if (localStorage.getItem(seenKey)) return;
+  localStorage.setItem(seenKey, "1");
+  showToast(message, "success");
+}
+
+// ---------- quest tally: total poems written together ----------
+async function loadQuestTally() {
+  const el = $("quest-tally");
+  try {
+    const snap = await db.collection("poems").where("status", "==", "published").get();
+    const count = snap.size;
+    if (count === 0) {
+      el.classList.add("is-hidden");
+      return;
+    }
+    el.textContent = `📜 ${count} ${count === 1 ? "quest" : "quests"} completed together`;
+    el.classList.remove("is-hidden");
+
+    const milestones = [5, 10, 25, 50, 100];
+    const hit = milestones.find(m => m === count);
+    if (hit) {
+      checkMilestone(`poems-${hit}`, true, `🏆 Milestone unlocked: ${hit} poems written together!`);
+    }
+  } catch (err) {
+    console.warn("Couldn't load quest tally:", err);
+  }
+}
+
+// ---------- couple photo (shown next to the days-together counter) ----------
+async function loadCouplePhoto() {
+  try {
+    const doc = await db.collection("settings").doc("shared").get();
+    const data = doc.exists ? doc.data() : null;
+    const img = $("couple-photo");
+    if (data && data.couplePhoto) {
+      img.src = data.couplePhoto;
+      img.classList.remove("is-hidden");
+    } else {
+      img.classList.add("is-hidden");
+    }
+  } catch (err) {
+    console.warn("Couldn't load couple photo:", err);
+  }
+}
+
+$("couple-photo-btn").addEventListener("click", () => {
+  $("couple-photo-input").click();
+});
+
+$("couple-photo-input").addEventListener("change", async () => {
+  const file = $("couple-photo-input").files[0];
+  if (!file) return;
+  try {
+    showToast("Updating photo…", "info");
+    const compressed = await compressImage(file, 500, 0.7);
+    await db.collection("settings").doc("shared").set(
+      { couplePhoto: compressed },
+      { merge: true }
+    );
+    const img = $("couple-photo");
+    img.src = compressed;
+    img.classList.remove("is-hidden");
+    showToast("Photo updated ✦", "success");
+  } catch (err) {
+    showToast("Couldn't update photo: " + err.message, "error");
+  }
+});
 
 // ---------- "on this day" memory ----------
 async function checkOnThisDay() {
@@ -338,6 +423,7 @@ function renderPoemCard(p) {
   }
 
   card.innerHTML = `
+    ${p.imageData ? `<img class="poem-photo" src="${p.imageData}" alt="" />` : ""}
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
@@ -764,9 +850,69 @@ async function addComment(poem, text, listEl, formEl) {
   }
 }
 
+// ---------- image compression (keeps photos small enough for free Firestore storage) ----------
+function compressImage(file, maxDim = 700, startQuality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) {
+          height = Math.round(height * (maxDim / width));
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round(width * (maxDim / height));
+          height = maxDim;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+        let quality = startQuality;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        while (dataUrl.length > 700000 && quality > 0.2) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error("Couldn't read that image."));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Couldn't read that file."));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ---------- editor ----------
 $("new-draft-btn").addEventListener("click", () => openEditor(null));
 $("close-editor-btn").addEventListener("click", closeEditor);
+
+let editorPhotoData = null;
+const editorPhotoInput = $("editor-photo-input");
+const editorPhotoPreview = $("editor-photo-preview");
+const editorPhotoImg = $("editor-photo-img");
+
+editorPhotoInput.addEventListener("change", async () => {
+  const file = editorPhotoInput.files[0];
+  if (!file) return;
+  try {
+    showToast("Adding photo…", "info");
+    editorPhotoData = await compressImage(file);
+    editorPhotoImg.src = editorPhotoData;
+    editorPhotoPreview.classList.remove("is-hidden");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+});
+
+$("editor-photo-remove").addEventListener("click", () => {
+  editorPhotoData = null;
+  editorPhotoInput.value = "";
+  editorPhotoPreview.classList.add("is-hidden");
+});
 
 function openEditor(poem) {
   editingPoemId = poem ? poem.id : null;
@@ -775,6 +921,16 @@ function openEditor(poem) {
   editorBody.value = poem ? poem.body : "";
   editorStatus.textContent = "";
   $("delete-poem-btn").classList.toggle("is-hidden", !poem);
+
+  editorPhotoData = poem && poem.imageData ? poem.imageData : null;
+  editorPhotoInput.value = "";
+  if (editorPhotoData) {
+    editorPhotoImg.src = editorPhotoData;
+    editorPhotoPreview.classList.remove("is-hidden");
+  } else {
+    editorPhotoPreview.classList.add("is-hidden");
+  }
+
   editor.classList.remove("is-hidden");
   editorTitle.focus();
 }
@@ -821,6 +977,12 @@ async function savePoem(status, silent) {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
+  if (editorPhotoData) {
+    data.imageData = editorPhotoData;
+  } else if (editingPoemId) {
+    data.imageData = firebase.firestore.FieldValue.delete();
+  }
+
   if (status === "published") {
     const wasAlreadyPublished = editingPoemOriginalStatus === "published";
     if (wasAlreadyPublished) {
@@ -855,6 +1017,7 @@ async function savePoem(status, silent) {
       }
       editingPoemOriginalStatus = "published";
       if (selectedAuthor === currentProfile.name) loadPublishedPoems();
+      loadQuestTally();
     } else if (silent) {
       editorStatus.textContent = "Saved ✓";
     } else {
