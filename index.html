@@ -69,7 +69,14 @@
     <header class="app-header">
       <div>
         <p class="app-mark">Ink Between Us</p>
-        <p id="days-together" class="days-together is-hidden"></p>
+        <div class="together-row">
+          <div class="couple-photo-wrap">
+            <img id="couple-photo" class="couple-photo is-hidden" alt="Us" />
+            <button type="button" id="couple-photo-btn" class="couple-photo-btn" aria-label="Change our photo">📷</button>
+            <input type="file" id="couple-photo-input" accept="image/*" class="is-hidden" />
+          </div>
+          <p id="days-together" class="days-together is-hidden"></p>
+        </div>
       </div>
       <div class="app-header-right">
         <button type="button" id="dark-toggle" class="btn btn-ghost dark-toggle-btn" aria-label="Toggle dark mode">🌙</button>
@@ -122,10 +129,21 @@
         <h2>Your writing desk</h2>
         <button id="new-draft-btn" class="btn btn-primary">New poem</button>
       </div>
+      <p id="quest-tally" class="quest-tally is-hidden"></p>
 
       <div id="editor" class="editor is-hidden">
         <input type="text" id="editor-title" placeholder="Title" maxlength="120" />
         <textarea id="editor-body" placeholder="Start writing…" rows="10"></textarea>
+
+        <div class="editor-photo-row">
+          <label for="editor-photo-input" class="btn btn-secondary editor-photo-label">📷 Add a photo</label>
+          <input type="file" id="editor-photo-input" accept="image/*" class="is-hidden" />
+          <div id="editor-photo-preview" class="editor-photo-preview is-hidden">
+            <img id="editor-photo-img" alt="Preview" />
+            <button type="button" id="editor-photo-remove" class="btn btn-ghost">Remove photo</button>
+          </div>
+        </div>
+
         <div class="editor-actions">
           <button id="save-draft-btn" class="btn btn-secondary">Save draft</button>
           <button id="publish-btn" class="btn btn-primary">Publish to them</button>
