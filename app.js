@@ -70,6 +70,20 @@ function showConfirm(message, confirmLabel = "Delete") {
 const authScreen = $("auth-screen");
 const appScreen = $("app-screen");
 
+// ---------- photo lightbox ----------
+const lightbox = $("lightbox");
+const lightboxImg = $("lightbox-img");
+function openLightbox(src) {
+  if (!src) return;
+  lightboxImg.src = src;
+  lightbox.classList.remove("is-hidden");
+}
+function closeLightbox() {
+  lightbox.classList.add("is-hidden");
+  lightboxImg.src = "";
+}
+lightbox.addEventListener("click", closeLightbox);
+
 const loginForm = $("login-form");
 const signupForm = $("signup-form");
 const authTabs = document.querySelectorAll(".auth-tab");
@@ -423,10 +437,10 @@ function renderPoemCard(p) {
   }
 
   card.innerHTML = `
-    ${p.imageData ? `<img class="poem-photo" src="${p.imageData}" alt="" />` : ""}
     <h3 class="poem-title"></h3>
     <p class="poem-meta"></p>
     <p class="poem-body"></p>
+    ${p.imageData ? `<img class="poem-photo" src="${p.imageData}" alt="" />` : ""}
     <div class="poem-actions-row">
       <button class="heart-btn" type="button" aria-label="Like this poem">
         <span class="heart-icon">♡</span>
@@ -454,6 +468,11 @@ function renderPoemCard(p) {
   card.querySelector(".poem-title").textContent = p.title || "Untitled";
   card.querySelector(".poem-meta").textContent = metaText;
   card.querySelector(".poem-body").textContent = p.body || "";
+
+  const feedPhoto = card.querySelector(".poem-photo");
+  if (feedPhoto) {
+    feedPhoto.addEventListener("click", () => openLightbox(p.imageData));
+  }
 
   // ---- heart / like wiring ----
   const likedBy = p.likedBy ? [...p.likedBy] : []; // local mutable copy for optimistic UI
@@ -894,24 +913,34 @@ let editorPhotoData = null;
 const editorPhotoInput = $("editor-photo-input");
 const editorPhotoPreview = $("editor-photo-preview");
 const editorPhotoImg = $("editor-photo-img");
+const editorPhotoAddLabel = $("editor-photo-add-label");
+
+function setEditorPhoto(dataUrl) {
+  editorPhotoData = dataUrl;
+  if (dataUrl) {
+    editorPhotoImg.src = dataUrl;
+    editorPhotoPreview.classList.remove("is-hidden");
+    editorPhotoAddLabel.classList.add("is-hidden");
+  } else {
+    editorPhotoPreview.classList.add("is-hidden");
+    editorPhotoAddLabel.classList.remove("is-hidden");
+  }
+}
 
 editorPhotoInput.addEventListener("change", async () => {
   const file = editorPhotoInput.files[0];
   if (!file) return;
   try {
     showToast("Adding photo…", "info");
-    editorPhotoData = await compressImage(file);
-    editorPhotoImg.src = editorPhotoData;
-    editorPhotoPreview.classList.remove("is-hidden");
+    setEditorPhoto(await compressImage(file));
   } catch (err) {
     showToast(err.message, "error");
   }
 });
 
 $("editor-photo-remove").addEventListener("click", () => {
-  editorPhotoData = null;
   editorPhotoInput.value = "";
-  editorPhotoPreview.classList.add("is-hidden");
+  setEditorPhoto(null);
 });
 
 function openEditor(poem) {
@@ -922,14 +951,8 @@ function openEditor(poem) {
   editorStatus.textContent = "";
   $("delete-poem-btn").classList.toggle("is-hidden", !poem);
 
-  editorPhotoData = poem && poem.imageData ? poem.imageData : null;
   editorPhotoInput.value = "";
-  if (editorPhotoData) {
-    editorPhotoImg.src = editorPhotoData;
-    editorPhotoPreview.classList.remove("is-hidden");
-  } else {
-    editorPhotoPreview.classList.add("is-hidden");
-  }
+  setEditorPhoto(poem && poem.imageData ? poem.imageData : null);
 
   editor.classList.remove("is-hidden");
   editorTitle.focus();
