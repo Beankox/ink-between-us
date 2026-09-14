@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3" />
+<link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -136,12 +136,12 @@
         <textarea id="editor-body" placeholder="Start writing…" rows="10"></textarea>
 
         <div class="editor-photo-row">
-          <label for="editor-photo-input" class="btn btn-secondary editor-photo-label">📷 Add a photo</label>
-          <input type="file" id="editor-photo-input" accept="image/*" class="is-hidden" />
           <div id="editor-photo-preview" class="editor-photo-preview is-hidden">
             <img id="editor-photo-img" alt="Preview" />
-            <button type="button" id="editor-photo-remove" class="btn btn-ghost">Remove photo</button>
+            <button type="button" id="editor-photo-remove" class="editor-photo-remove-btn" aria-label="Remove photo">✕</button>
           </div>
+          <label for="editor-photo-input" id="editor-photo-add-label" class="editor-photo-add-label">📷 Add a photo</label>
+          <input type="file" id="editor-photo-input" accept="image/*" class="is-hidden" />
         </div>
 
         <div class="editor-actions">
@@ -175,6 +175,11 @@
     </div>
   </div>
 
+  <!-- Photo lightbox (tap a feed photo to view it full-size) -->
+  <div id="lightbox" class="lightbox-overlay is-hidden">
+    <img id="lightbox-img" class="lightbox-img" alt="" />
+  </div>
+
   <!-- Firebase (compat build keeps this script-tag friendly, no build step) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
@@ -183,6 +188,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
