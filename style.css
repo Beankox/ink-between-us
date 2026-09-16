@@ -785,3 +785,126 @@ body.dark-mode .toast-success{
   background: #253A22;
   color: #B7D8AE;
 }
+
+/* ---------- settings modal ---------- */
+.settings-card{ max-width: 360px; text-align: left; }
+.settings-head{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 1.1rem;
+}
+.settings-title{
+  font-family: var(--display); font-weight: 700; font-size: 1.1rem;
+  margin: 0; color: var(--ink);
+}
+.settings-section{ margin-bottom: 1.1rem; }
+.settings-section:last-child{ margin-bottom: 0; }
+.settings-label{
+  display:block; font-family: var(--display); font-weight: 600;
+  font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 0.4rem;
+}
+.settings-row{ display:flex; gap: 0.5rem; }
+.settings-input{
+  flex: 1; min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid var(--rule);
+  background: var(--paper);
+  border-radius: 12px;
+}
+.settings-checkbox-row{
+  display:flex; align-items:center; gap: 0.6rem;
+  font-family: var(--sans); font-weight: 600; font-size: 0.88rem;
+  color: var(--ink); cursor: pointer;
+}
+.settings-checkbox-row input{ width: 18px; height: 18px; accent-color: var(--moss); }
+
+/* ---------- poem design: style picker in the editor ---------- */
+.style-picker{
+  border: 2px dashed var(--rule);
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+.style-picker-label{
+  font-family: var(--display); font-weight: 600; font-size: 0.78rem;
+  color: var(--ink-soft); margin: 0 0 0.4rem;
+}
+.style-picker-label:not(:first-child){ margin-top: 0.8rem; }
+.style-chip-row{ display:flex; gap: 0.5rem; flex-wrap: wrap; }
+.style-chip{
+  background: var(--paper);
+  border: 2px solid var(--rule);
+  border-radius: 999px;
+  font-family: var(--display); font-weight: 600; font-size: 0.82rem;
+  color: var(--ink-soft);
+  padding: 0.4rem 0.85rem;
+}
+.style-chip.is-active{
+  background: var(--moss); color: var(--paper-raised); border-color: var(--moss);
+}
+.color-swatch-row{ display:flex; gap: 0.6rem; }
+.color-swatch{
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch[data-accent="moss"]{ background: var(--moss); }
+.color-swatch[data-accent="honey"]{ background: var(--honey); }
+.color-swatch[data-accent="blush"]{ background: var(--blush); }
+.color-swatch[data-accent="sky"]{ background: #7FA8C9; }
+.color-swatch[data-accent="berry"]{ background: #A9648C; }
+.color-swatch.is-active{ border-color: var(--ink); }
+
+/* ---------- poem design: applied to feed cards ---------- */
+.poem-body.font-handwritten{
+  font-family: 'Caveat', cursive;
+  font-size: 1.5rem; line-height: 1.5;
+}
+.poem-body.font-typewriter{
+  font-family: 'Courier Prime', monospace;
+  font-size: 0.96rem;
+}
+.poem-body.align-center{ text-align: center; margin-left: auto; margin-right: auto; }
+
+.poem-card[data-accent="honey"]{ border-color: var(--honey); }
+.poem-card[data-accent="honey"]::before{ background: var(--honey); }
+.poem-card[data-accent="blush"]{ border-color: var(--blush); }
+.poem-card[data-accent="blush"]::before{ background: var(--blush); }
+.poem-card[data-accent="sky"]{ border-color: #7FA8C9; }
+.poem-card[data-accent="sky"]::before{ background: #7FA8C9; }
+.poem-card[data-accent="berry"]{ border-color: #A9648C; }
+.poem-card[data-accent="berry"]::before{ background: #A9648C; }
+
+/* ---------- poem font moods (chosen per-poem in the style picker) ---------- */
+.poem-font-handwritten .poem-body{
+  font-family: 'Caveat', var(--serif);
+  font-size: 1.45rem;
+  line-height: 1.45;
+}
+.poem-font-typewriter .poem-body{
+  font-family: 'Courier Prime', monospace;
+  font-size: 0.96rem;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- poem alignment ---------- */
+.poem-align-center .poem-title,
+.poem-align-center .poem-meta,
+.poem-align-center .poem-body{
+  text-align: center;
+}
+.poem-align-center .poem-body{ max-width: none; }
+.poem-align-center .poem-actions-row{ justify-content: center; }
+
+/* ---------- poem accent colors (chosen per-poem) ---------- */
+.poem-accent-moss{ border-color: var(--moss); }
+.poem-accent-moss::before{ background: var(--moss); }
+.poem-accent-honey{ border-color: var(--honey); }
+.poem-accent-honey::before{ background: var(--honey); }
+.poem-accent-blush{ border-color: var(--blush); }
+.poem-accent-blush::before{ background: var(--blush); }
+.poem-accent-sky{ border-color: #7FA8C9; }
+.poem-accent-sky::before{ background: #7FA8C9; }
+.poem-accent-berry{ border-color: #A9648C; }
+.poem-accent-berry::before{ background: #A9648C; }
