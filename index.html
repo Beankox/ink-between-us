@@ -11,8 +11,8 @@
 <link rel="apple-touch-icon" href="icon.png" />
 <link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4" />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Quicksand:wght@500;600;700&family=Caveat:wght@500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
@@ -79,6 +79,7 @@
         </div>
       </div>
       <div class="app-header-right">
+        <button type="button" id="settings-btn" class="btn btn-ghost dark-toggle-btn" aria-label="Settings">⚙️</button>
         <button type="button" id="dark-toggle" class="btn btn-ghost dark-toggle-btn" aria-label="Toggle dark mode">🌙</button>
         <div class="notif-wrap" id="notif-wrap">
           <button type="button" id="notif-bell" class="notif-bell-btn">
@@ -144,6 +145,30 @@
           <input type="file" id="editor-photo-input" accept="image/*" class="is-hidden" />
         </div>
 
+        <div class="style-picker">
+          <p class="style-picker-label">Font mood</p>
+          <div class="style-chip-row" id="font-style-picker">
+            <button type="button" class="style-chip is-active" data-font="serif">Serif</button>
+            <button type="button" class="style-chip" data-font="handwritten">Handwritten</button>
+            <button type="button" class="style-chip" data-font="typewriter">Typewriter</button>
+          </div>
+
+          <p class="style-picker-label">Accent color</p>
+          <div class="color-swatch-row" id="accent-color-picker">
+            <button type="button" class="color-swatch is-active" data-accent="moss" aria-label="Moss"></button>
+            <button type="button" class="color-swatch" data-accent="honey" aria-label="Honey"></button>
+            <button type="button" class="color-swatch" data-accent="blush" aria-label="Blush"></button>
+            <button type="button" class="color-swatch" data-accent="sky" aria-label="Sky"></button>
+            <button type="button" class="color-swatch" data-accent="berry" aria-label="Berry"></button>
+          </div>
+
+          <p class="style-picker-label">Alignment</p>
+          <div class="style-chip-row" id="align-picker">
+            <button type="button" class="style-chip is-active" data-align="left">Left</button>
+            <button type="button" class="style-chip" data-align="center">Centered</button>
+          </div>
+        </div>
+
         <div class="editor-actions">
           <button id="save-draft-btn" class="btn btn-secondary">Save draft</button>
           <button id="publish-btn" class="btn btn-primary">Publish to them</button>
@@ -175,6 +200,39 @@
     </div>
   </div>
 
+  <!-- Account settings -->
+  <div id="settings-modal" class="confirm-overlay is-hidden">
+    <div class="confirm-card settings-card">
+      <div class="settings-head">
+        <p class="settings-title">Settings</p>
+        <button type="button" id="settings-close" class="notif-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="settings-section">
+        <label class="settings-label" for="settings-partner-email">Your lover's email</label>
+        <div class="settings-row">
+          <input type="email" id="settings-partner-email" class="settings-input" />
+          <button type="button" id="settings-save-partner" class="btn btn-secondary">Save</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <label class="settings-label" for="settings-new-password">New password</label>
+        <div class="settings-row">
+          <input type="password" id="settings-new-password" class="settings-input" placeholder="At least 6 characters" minlength="6" />
+          <button type="button" id="settings-save-password" class="btn btn-secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <label class="settings-checkbox-row">
+          <input type="checkbox" id="settings-email-toggle" checked />
+          Also email me when she publishes, likes, or leaves a note
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- Photo lightbox (tap a feed photo to view it full-size) -->
   <div id="lightbox" class="lightbox-overlay is-hidden">
     <img id="lightbox-img" class="lightbox-img" alt="" />
@@ -188,6 +246,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
