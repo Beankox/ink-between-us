@@ -146,6 +146,80 @@ loginForm.addEventListener("submit", async (e) => {
 
 $("logout-btn").addEventListener("click", () => auth.signOut());
 
+// ---------- account settings ----------
+const settingsModal = $("settings-modal");
+const settingsBtn = $("settings-btn");
+const settingsPartnerEmailInput = $("settings-partner-email");
+const settingsEmailToggle = $("settings-email-toggle");
+
+settingsBtn.addEventListener("click", () => {
+  settingsPartnerEmailInput.value = (currentProfile && currentProfile.partnerEmail) || "";
+  settingsEmailToggle.checked = !currentProfile || currentProfile.emailNotifsEnabled !== false;
+  settingsModal.classList.remove("is-hidden");
+  settingsModal.classList.remove("confirm-show");
+  void settingsModal.offsetWidth;
+  settingsModal.classList.add("confirm-show");
+});
+function closeSettings() {
+  settingsModal.classList.remove("confirm-show");
+  setTimeout(() => settingsModal.classList.add("is-hidden"), 180);
+}
+$("settings-close").addEventListener("click", closeSettings);
+settingsModal.addEventListener("click", (e) => { if (e.target === settingsModal) closeSettings(); });
+
+$("settings-save-partner").addEventListener("click", async () => {
+  const email = settingsPartnerEmailInput.value.trim().toLowerCase();
+  if (!email) { showToast("Enter an email first.", "error"); return; }
+  try {
+    await db.collection("users").doc(currentUser.uid).update({ partnerEmail: email });
+    currentProfile.partnerEmail = email;
+    partnerUidCache = null; // force a fresh lookup next time it's needed
+    showToast("Partner email updated.", "success");
+  } catch (err) {
+    showToast("Couldn't update: " + err.message, "error");
+  }
+});
+
+$("settings-save-password").addEventListener("click", async () => {
+  const newPassword = $("settings-new-password").value;
+  if (!newPassword || newPassword.length < 6) {
+    showToast("Password needs at least 6 characters.", "error");
+    return;
+  }
+  try {
+    await currentUser.updatePassword(newPassword);
+    $("settings-new-password").value = "";
+    showToast("Password changed.", "success");
+  } catch (err) {
+    if (err.code === "auth/requires-recent-login") {
+      showToast("Log out and back in, then try again.", "error");
+    } else {
+      showToast("Couldn't change password: " + err.message, "error");
+    }
+  }
+});
+
+settingsEmailToggle.addEventListener("change", async () => {
+  try {
+    await db.collection("users").doc(currentUser.uid).update({ emailNotifsEnabled: settingsEmailToggle.checked });
+    currentProfile.emailNotifsEnabled = settingsEmailToggle.checked;
+  } catch (err) {
+    showToast("Couldn't save preference: " + err.message, "error");
+  }
+});
+
+// checks whether the RECIPIENT of a notification wants emails too (their own setting, not the sender's)
+async function emailNotifsAllowedFor(uid) {
+  if (!uid) return true;
+  try {
+    const doc = await db.collection("users").doc(uid).get();
+    const data = doc.data();
+    return data ? data.emailNotifsEnabled !== false : true;
+  } catch (err) {
+    return true; // fail open — better to send one extra email than silently go quiet
+  }
+}
+
 // ---------- auth state ----------
 auth.onAuthStateChanged(async (user) => {
   currentUser = user;
@@ -422,6 +496,9 @@ function renderPoemCard(p) {
   card.className = "poem-card";
   const isOwner = currentProfile && p.authorName === currentProfile.name;
   if (isOwner) card.classList.add("poem-card-owned");
+  if (p.font && p.font !== "serif") card.classList.add(`poem-font-${p.font}`);
+  card.classList.add(`poem-accent-${p.accent || "moss"}`);
+  if (p.align === "center") card.classList.add("poem-align-center");
 
   const publishedDate = p.publishedAt?.toDate ? p.publishedAt.toDate() : null;
   const editedDate = p.editedAt?.toDate ? p.editedAt.toDate() : null;
@@ -640,12 +717,11 @@ function toggleLike(poem, likedByArr, btnEl) {
     // only notify on a fresh like (not on unlike), and not when liking your own poem
     const justLiked = !isLiked;
     if (justLiked && poem.authorUid !== uid) {
-      sendNotificationEmail(
-        poem.authorEmail,
-        currentProfile.name,
-        poem.title,
-        `liked your poem.`
-      );
+      emailNotifsAllowedFor(poem.authorUid).then(allowed => {
+        if (allowed) {
+          sendNotificationEmail(poem.authorEmail, currentProfile.name, poem.title, `liked your poem.`);
+        }
+      });
       createNotification(poem.authorUid, "liked your poem.", poem.title);
     }
   }).catch(err => {
@@ -856,12 +932,14 @@ async function addComment(poem, text, listEl, formEl) {
 
     // notify the poem's author, unless they're commenting on their own poem
     if (poem.authorUid !== currentUser.uid) {
-      await sendNotificationEmail(
-        poem.authorEmail,
-        currentProfile.name,
-        poem.title,
-        `commented on your poem.`
-      );
+      if (await emailNotifsAllowedFor(poem.authorUid)) {
+        await sendNotificationEmail(
+          poem.authorEmail,
+          currentProfile.name,
+          poem.title,
+          `commented on your poem.`
+        );
+      }
       createNotification(poem.authorUid, "commented on your poem.", poem.title);
     }
   } catch (err) {
@@ -943,6 +1021,32 @@ $("editor-photo-remove").addEventListener("click", () => {
   setEditorPhoto(null);
 });
 
+// ---------- poem style picker (font mood, accent color, alignment) ----------
+let editorFont = "serif";
+let editorAccent = "moss";
+let editorAlign = "left";
+
+function setStylePicker(font, accent, align) {
+  editorFont = font || "serif";
+  editorAccent = accent || "moss";
+  editorAlign = align || "left";
+  document.querySelectorAll("#font-style-picker .style-chip").forEach(b =>
+    b.classList.toggle("is-active", b.dataset.font === editorFont));
+  document.querySelectorAll("#accent-color-picker .color-swatch").forEach(b =>
+    b.classList.toggle("is-active", b.dataset.accent === editorAccent));
+  document.querySelectorAll("#align-picker .style-chip").forEach(b =>
+    b.classList.toggle("is-active", b.dataset.align === editorAlign));
+}
+document.querySelectorAll("#font-style-picker .style-chip").forEach(btn => {
+  btn.addEventListener("click", () => setStylePicker(btn.dataset.font, editorAccent, editorAlign));
+});
+document.querySelectorAll("#accent-color-picker .color-swatch").forEach(btn => {
+  btn.addEventListener("click", () => setStylePicker(editorFont, btn.dataset.accent, editorAlign));
+});
+document.querySelectorAll("#align-picker .style-chip").forEach(btn => {
+  btn.addEventListener("click", () => setStylePicker(editorFont, editorAccent, btn.dataset.align));
+});
+
 function openEditor(poem) {
   editingPoemId = poem ? poem.id : null;
   editingPoemOriginalStatus = poem ? poem.status : null;
@@ -953,6 +1057,7 @@ function openEditor(poem) {
 
   editorPhotoInput.value = "";
   setEditorPhoto(poem && poem.imageData ? poem.imageData : null);
+  setStylePicker(poem ? poem.font : null, poem ? poem.accent : null, poem ? poem.align : null);
 
   editor.classList.remove("is-hidden");
   editorTitle.focus();
@@ -994,6 +1099,9 @@ async function savePoem(status, silent) {
     title,
     body,
     status,
+    font: editorFont,
+    accent: editorAccent,
+    align: editorAlign,
     authorUid: currentUser.uid,
     authorName: currentProfile.name,
     authorEmail: currentProfile.email,
@@ -1029,13 +1137,15 @@ async function savePoem(status, silent) {
       showToast("Published! ✦", "success");
       const isFreshPublish = editingPoemOriginalStatus !== "published";
       if (isFreshPublish) {
-        await sendNotificationEmail(
-          currentProfile.partnerEmail,
-          currentProfile.name,
-          title,
-          `just published a new poem for you.`
-        );
         const partnerUid = await getPartnerUid();
+        if (await emailNotifsAllowedFor(partnerUid)) {
+          await sendNotificationEmail(
+            currentProfile.partnerEmail,
+            currentProfile.name,
+            title,
+            `just published a new poem for you.`
+          );
+        }
         createNotification(partnerUid, "published a new poem for you.", title);
       }
       editingPoemOriginalStatus = "published";
